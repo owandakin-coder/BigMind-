@@ -1,0 +1,254 @@
+{
+  "name": "CourseForge — Main Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "courseforge/trigger",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst required = ['courseId', 'userId', 'niche'];\nconst missing = required.filter(k => !body[k]);\nif (missing.length > 0) throw new Error('Missing required fields: ' + missing.join(', '));\nreturn [{ json: body }];"
+      },
+      "id": "validate-input",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/courses?id=eq.{{ $json.courseId }}&select=status,user_id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Accept",        "value": "application/json" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-course-status",
+      "name": "Fetch Course Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const courses = $input.first().json;\nif (!Array.isArray(courses) || courses.length === 0) throw new Error('Course not found');\nconst course = courses[0];\nconst body = $('Validate Input').first().json;\nreturn [{ json: { ...body, currentStatus: course.status, ownerId: course.user_id } }];"
+      },
+      "id": "extract-status",
+      "name": "Extract Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "draft",                "output": 0  },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "market_research",     "output": 0  },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "pivot_triggered",     "output": 0  },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "course_architecture", "output": 1  },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "content_production",  "output": 2  },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "sales_page_generation","output": 3  },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "marketing_assets",    "output": 4  },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "analytics_review",    "output": 5  },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "publishing",          "output": 6  },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "publishing_confirmed","output": 7  },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "portfolio_sync",      "output": 8  },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "revenue_analysis",    "output": 9  },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "seo_optimization",    "output": 10 },
+            { "operation": "equal", "value1": "={{ $json.currentStatus }}", "value2": "customer_success_active","output": 10 }
+          ]
+        },
+        "fallbackOutput": "extra"
+      },
+      "id": "status-router",
+      "name": "Status Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SUPABASE_URL }}/functions/v1/execute-agent-workflow",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "courseId", "value": "={{ $json.courseId }}" },
+            { "name": "userId",   "value": "={{ $json.userId }}" },
+            { "name": "niche",    "value": "={{ $json.niche }}" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "options": { "timeout": 300000 }
+      },
+      "id": "call-edge-function",
+      "name": "Call Edge Function (all routes)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            { "value1": "={{ $json.success }}", "value2": true }
+          ]
+        }
+      },
+      "id": "check-success",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, courseId: $json.courseId, nextStatus: $json.nextStatus, agentName: $json.agentName, summary: $json.summary }) }}"
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1600, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/agent_logs",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "course_id",  "value": "={{ $('Extract Status').first().json.courseId }}" },
+            { "name": "agent_name", "value": "n8n_orchestrator" },
+            { "name": "status",     "value": "failed" },
+            { "name": "error",      "value": "={{ JSON.stringify({ message: $json.error || 'Agent execution failed', response: $json }) }}" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-failure",
+      "name": "Log Failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1600, 400]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/agent_logs",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "course_id",  "value": "={{ $('Extract Status').first().json.courseId }}" },
+            { "name": "agent_name", "value": "n8n_orchestrator" },
+            { "name": "status",     "value": "dead_letter" },
+            { "name": "error",      "value": "={ \"message\": \"No agent handler for status\", \"status\": \"{{ $('Extract Status').first().json.currentStatus }}\" }" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_ANON_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dead-letter-queue",
+      "name": "Dead Letter Queue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1200, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 422,
+        "responseBody": "={ \"error\": \"Unroutable status\", \"status\": \"{{ $('Extract Status').first().json.currentStatus }}\" }"
+      },
+      "id": "unroutable-response",
+      "name": "Unroutable Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1400, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 500,
+        "responseBody": "={{ JSON.stringify({ error: 'Agent execution failed', details: $json }) }}"
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1800, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger":    { "main": [[{ "node": "Validate Input",       "type": "main", "index": 0 }]] },
+    "Validate Input":     { "main": [[{ "node": "Fetch Course Status",   "type": "main", "index": 0 }]] },
+    "Fetch Course Status":{ "main": [[{ "node": "Extract Status",        "type": "main", "index": 0 }]] },
+    "Extract Status":     { "main": [[{ "node": "Status Router",         "type": "main", "index": 0 }]] },
+    "Status Router": {
+      "main": [
+        [{ "node": "Call Edge Function (all routes)", "type": "main", "index": 0 }],
+        [{ "node": "Call Edge Function (all routes)", "type": "main", "index": 0 }],
+        [{ "node": "Call Edge Function (all routes)", "type": "main", "index": 0 }],
+        [{ "node": "Call Edge Function (all routes)", "type": "main", "index": 0 }],
+        [{ "node": "Call Edge Function (all routes)", "type": "main", "index": 0 }],
+        [{ "node": "Call Edge Function (all routes)", "type": "main", "index": 0 }],
+        [{ "node": "Call Edge Function (all routes)", "type": "main", "index": 0 }],
+        [{ "node": "Call Edge Function (all routes)", "type": "main", "index": 0 }],
+        [{ "node": "Call Edge Function (all routes)", "type": "main", "index": 0 }],
+        [{ "node": "Call Edge Function (all routes)", "type": "main", "index": 0 }],
+        [{ "node": "Call Edge Function (all routes)", "type": "main", "index": 0 }],
+        [{ "node": "Dead Letter Queue",               "type": "main", "index": 0 }]
+      ]
+    },
+    "Call Edge Function (all routes)": { "main": [[{ "node": "Check Success", "type": "main", "index": 0 }]] },
+    "Check Success": {
+      "main": [
+        [{ "node": "Success Response", "type": "main", "index": 0 }],
+        [{ "node": "Log Failure",      "type": "main", "index": 0 }]
+      ]
+    },
+    "Log Failure":        { "main": [[{ "node": "Error Response",      "type": "main", "index": 0 }]] },
+    "Dead Letter Queue":  { "main": [[{ "node": "Unroutable Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "courseforge-error-handler"
+  },
+  "staticData": null,
+  "tags": ["courseforge", "orchestrator"],
+  "pinData": {}
+}

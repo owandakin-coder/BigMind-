@@ -1,0 +1,171 @@
+/* ============================================================
+   CourseForge AI — Design Tokens
+   8pt spacing system · Inter · Dark premium theme
+   ============================================================ */
+
+:root {
+  /* ── Primitives ────────────────────────────────────────── */
+  --color-black:        #000000;
+  --color-white:        #ffffff;
+
+  /* Grey scale */
+  --color-grey-950:     #0a0a0f;
+  --color-grey-900:     #111118;
+  --color-grey-850:     #16161f;
+  --color-grey-800:     #1c1c27;
+  --color-grey-750:     #22222f;
+  --color-grey-700:     #2a2a3a;
+  --color-grey-600:     #3d3d52;
+  --color-grey-500:     #565670;
+  --color-grey-400:     #7878a0;
+  --color-grey-300:     #a0a0be;
+  --color-grey-200:     #c4c4d8;
+  --color-grey-100:     #e4e4ef;
+  --color-grey-50:      #f4f4f9;
+
+  /* Brand */
+  --color-indigo-600:   #4f46e5;
+  --color-indigo-500:   #6366f1;
+  --color-indigo-400:   #818cf8;
+  --color-indigo-300:   #a5b4fc;
+  --color-indigo-100:   #e0e7ff;
+
+  /* Semantic */
+  --color-green-500:    #22c55e;
+  --color-green-400:    #4ade80;
+  --color-green-900:    #14532d;
+  --color-green-100:    #dcfce7;
+
+  --color-amber-500:    #f59e0b;
+  --color-amber-400:    #fbbf24;
+  --color-amber-900:    #78350f;
+  --color-amber-100:    #fef3c7;
+
+  --color-red-500:      #ef4444;
+  --color-red-400:      #f87171;
+  --color-red-900:      #7f1d1d;
+  --color-red-100:      #fee2e2;
+
+  --color-blue-500:     #3b82f6;
+  --color-blue-400:     #60a5fa;
+  --color-blue-900:     #1e3a5f;
+  --color-blue-100:     #dbeafe;
+
+  --color-violet-500:   #8b5cf6;
+  --color-violet-400:   #a78bfa;
+  --color-violet-900:   #2e1065;
+
+  --color-cyan-500:     #06b6d4;
+  --color-cyan-400:     #22d3ee;
+  --color-cyan-900:     #164e63;
+
+  --color-rose-500:     #f43f5e;
+  --color-rose-400:     #fb7185;
+  --color-rose-900:     #4c0519;
+
+  /* ── Semantic Aliases ──────────────────────────────────── */
+
+  /* Surfaces */
+  --surface-base:         var(--color-grey-950);
+  --surface-raised:       var(--color-grey-900);
+  --surface-overlay:      var(--color-grey-850);
+  --surface-sunken:       var(--color-grey-800);
+  --surface-interactive:  var(--color-grey-750);
+  --surface-border:       var(--color-grey-700);
+  --surface-border-subtle:var(--color-grey-800);
+
+  /* Text */
+  --text-primary:       var(--color-grey-50);
+  --text-secondary:     var(--color-grey-300);
+  --text-tertiary:      var(--color-grey-500);
+  --text-disabled:      var(--color-grey-600);
+  --text-inverse:       var(--color-grey-950);
+  --text-brand:         var(--color-indigo-400);
+  --text-success:       var(--color-green-400);
+  --text-warning:       var(--color-amber-400);
+  --text-danger:        var(--color-red-400);
+
+  /* Brand interactive */
+  --brand-default:      var(--color-indigo-600);
+  --brand-hover:        var(--color-indigo-500);
+  --brand-active:       var(--color-indigo-400);
+  --brand-subtle:       rgba(99, 102, 241, 0.12);
+  --brand-subtle-hover: rgba(99, 102, 241, 0.20);
+
+  /* ── Status Colors ─────────────────────────────────────── */
+  /* Maps to course_status ENUM groups */
+  --status-idle:        var(--color-grey-500);
+  --status-agent:       var(--color-indigo-400);   /* agent-run states */
+  --status-hitl:        var(--color-amber-400);    /* HITL gate states */
+  --status-approved:    var(--color-green-400);    /* approved / published */
+  --status-error:       var(--color-red-400);      /* failed / cancelled */
+  --status-pivot:       var(--color-rose-400);     /* pivot_triggered */
+  --status-content:     var(--color-violet-400);   /* content pipeline */
+  --status-publishing:  var(--color-cyan-400);     /* publishing */
+
+  /* ── Spacing (8pt system) ──────────────────────────────── */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-7:   28px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+  --space-20:  80px;
+
+  /* ── Radius ────────────────────────────────────────────── */
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-card: 24px;   /* primary card radius */
+  --radius-pill: 9999px;
+
+  /* ── Shadows ───────────────────────────────────────────── */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.5);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.4);
+  --shadow-lg:  0 12px 32px rgba(0,0,0,0.6), 0 4px 8px rgba(0,0,0,0.4);
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.45);
+
+  /* ── Typography ────────────────────────────────────────── */
+  --font-sans:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:   'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+  --text-xs:    11px;
+  --text-sm:    13px;
+  --text-base:  15px;
+  --text-md:    16px;
+  --text-lg:    18px;
+  --text-xl:    20px;
+  --text-2xl:   24px;
+  --text-3xl:   30px;
+  --text-4xl:   36px;
+
+  --leading-tight:  1.25;
+  --leading-snug:   1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed:1.625;
+
+  --weight-regular: 400;
+  --weight-medium:  500;
+  --weight-semibold:600;
+  --weight-bold:    700;
+
+  /* ── Transitions ───────────────────────────────────────── */
+  --duration-fast:    120ms;
+  --duration-base:    200ms;
+  --duration-slow:    320ms;
+  --ease-out:         cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-in-out:      cubic-bezier(0.4, 0.0, 0.2, 1);
+
+  /* ── Z-index ───────────────────────────────────────────── */
+  --z-base:     0;
+  --z-raised:   10;
+  --z-dropdown: 100;
+  --z-modal:    200;
+  --z-toast:    300;
+  --z-tooltip:  400;
+}
