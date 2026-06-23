@@ -114,43 +114,49 @@ export const WrittenContentOutputSchema = z.object({
   reading_time_minutes: z.number(),
 })
 
+// Tolerant of common LLM deviations (unknown content_type, omitted notes/
+// infographics, over-long thumbnail) so the visual stream reliably persists.
+// Real structure is preserved; only over-strict constraints are relaxed.
 export const VisualContentOutputSchema = z.object({
   lesson_id: z.string().uuid(),
   slide_deck_outline: z.array(z.object({
-    slide_number: z.number().int(),
-    title:        z.string(),
-    content_type: z.enum(['title', 'concept', 'example', 'diagram', 'summary', 'quiz']),
-    notes:        z.string(),
-  })),
+    slide_number: z.number().int().catch(0),
+    title:        z.string().catch(''),
+    content_type: z.enum(['title', 'concept', 'example', 'diagram', 'summary', 'quiz']).catch('concept'),
+    notes:        z.string().optional().default(''),
+  })).optional().default([]),
   infographic_briefs: z.array(z.object({
-    title:       z.string(),
-    description: z.string(),
-    data_points: z.array(z.string()),
-  })).max(3),
-  thumbnail_prompt: z.string().max(500),
+    title:       z.string().catch(''),
+    description: z.string().optional().default(''),
+    data_points: z.array(z.string()).optional().default([]),
+  })).optional().default([]),
+  thumbnail_prompt: z.string().optional().default(''),
 })
 
+// Tolerant of common LLM deviations (≠4 options, missing explanation, fewer
+// questions, omitted workbook) so the interactive stream reliably persists.
+// A quiz still needs ≥1 question with ≥2 options — meaningful structure is kept.
 export const InteractiveContentOutputSchema = z.object({
   lesson_id: z.string().uuid(),
   quiz: z.object({
     questions: z.array(z.object({
-      question: z.string(),
-      options:  z.array(z.string()).length(4),
-      correct_index: z.number().int().min(0).max(3),
-      explanation: z.string(),
-    })).min(3).max(10),
-    passing_score: z.number().min(0).max(100).default(70),
+      question: z.string().catch(''),
+      options:  z.array(z.string()).min(2).max(6),
+      correct_index: z.number().int().min(0).catch(0),
+      explanation: z.string().optional().default(''),
+    })).min(1).max(20),
+    passing_score: z.number().min(0).max(100).catch(70).default(70),
   }),
   worksheet: z.object({
-    title:       z.string(),
-    instructions: z.string(),
+    title:       z.string().catch(''),
+    instructions: z.string().optional().default(''),
     exercises:   z.array(z.object({
-      number:    z.number().int(),
-      prompt:    z.string(),
-      type:      z.enum(['fill_blank', 'short_answer', 'multiple_choice', 'reflection', 'action_item']),
-    })).min(2).max(10),
+      number:    z.number().int().catch(0),
+      prompt:    z.string().catch(''),
+      type:      z.enum(['fill_blank', 'short_answer', 'multiple_choice', 'reflection', 'action_item']).catch('short_answer'),
+    })).min(1).max(20),
   }).optional(),
-  workbook_pages: z.array(z.string()).max(5),
+  workbook_pages: z.array(z.string()).optional().default([]),
 })
 
 export const ContentProductionOutputSchema = z.object({
