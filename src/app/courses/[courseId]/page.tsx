@@ -15,8 +15,8 @@ export const dynamic = 'force-dynamic'
  * └────────────────────────────┴─────────────────────────────┘
  */
 
-import React, { useCallback } from 'react'
-import { useParams, notFound } from 'next/navigation'
+import React, { useCallback, useState } from 'react'
+import { useParams, notFound, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { useRealtimeCourse } from '@/hooks/useRealtimeCourse'
@@ -28,7 +28,10 @@ import { PipelineVisualizer } from '@/components/pipeline/PipelineVisualizer'
 import { ApprovalQueue } from '@/components/approval/ApprovalQueue'
 import { AnalyticsCockpit } from '@/components/analytics/AnalyticsCockpit'
 import { AgentLogFeed } from '@/components/pipeline/AgentLogFeed'
-import { CourseContent } from '@/components/course/CourseContent'
+import { CoursePreview } from '@/components/preview/CoursePreview'
+import { SalesPagePreview } from '@/components/preview/SalesPagePreview'
+import { MarketingHub } from '@/components/preview/MarketingHub'
+import { LiveSuccess } from '@/components/preview/LiveSuccess'
 import { StatusPill } from '@/components/ui/StatusPill'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -259,10 +262,14 @@ function StatusGuidanceStrip({ courseId, status }: StatusGuidanceStripProps) {
 
 /* ── Main page ─────────────────────────────────────────────── */
 
+type TabId = 'workflow' | 'course' | 'assets' | 'publish'
+
 export default function CourseCommandCenter() {
   const params   = useParams<{ courseId: string }>()
   const courseId = params.courseId
   const supabase = createBrowserClient()
+  const router   = useRouter()
+  const [tab, setTab] = useState<TabId | null>(null)
 
   // ── Fetch course ──────────────────────────────────────────
   const { data: course, isLoading, error } = useQuery({
@@ -332,6 +339,15 @@ export default function CourseCommandCenter() {
   }
 
   const isHITLActive = isHumanReview(currentStatus)
+  const isLive       = currentStatus === 'live' || currentStatus === 'live_analytics'
+  const activeTab: TabId = tab ?? (isLive ? 'publish' : 'workflow')
+
+  const TABS: { id: TabId; label: string }[] = [
+    { id: 'workflow', label: 'Workflow' },
+    { id: 'course',   label: 'Course' },
+    { id: 'assets',   label: 'Assets' },
+    { id: 'publish',  label: 'Publish' },
+  ]
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--surface-base)', display: 'flex', flexDirection: 'column' }}>
@@ -346,48 +362,82 @@ export default function CourseCommandCenter() {
         credits={credits}
       />
 
+      {/* Tab navigation */}
+      <nav style={{ display: 'flex', gap: 'var(--space-1)', padding: '0 var(--space-8)', borderBottom: '1px solid var(--surface-border)', background: 'var(--surface-raised)' }}>
+        {TABS.map(t => {
+          const on = activeTab === t.id
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)',
+              fontWeight: on ? 'var(--weight-semibold)' : 'var(--weight-regular)',
+              color: on ? 'var(--text-primary)' : 'var(--text-tertiary)',
+              borderBottom: on ? '2px solid var(--color-indigo-400)' : '2px solid transparent',
+              marginBottom: -1,
+            }}>{t.label}</button>
+          )
+        })}
+      </nav>
+
       {/* Body */}
       <main style={{ flex: 1, padding: 'var(--space-6) var(--space-8)', display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-        {/* Status clarity strip — current status · next action · button · last result */}
-        <StatusGuidanceStrip courseId={courseId} status={currentStatus} />
-
-        {/* Failed-state recovery — gives the dead-end a way out (F5) */}
-        {currentStatus === 'failed' && (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 'var(--space-4)', flexWrap: 'wrap',
-            padding: 'var(--space-4) var(--space-5)',
-            background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.25)',
-            borderRadius: 'var(--radius-lg)',
-          }}>
-            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-              The last agent run failed. Reset the course to <strong style={{ color: 'var(--text-primary)' }}>draft</strong> to start over from Market Research.
-            </span>
-            <Button variant="danger" size="md" loading={isResetting} onClick={handleReset}>
-              Reset to draft
-            </Button>
-          </div>
+        {activeTab === 'workflow' && (
+          <>
+            <StatusGuidanceStrip courseId={courseId} status={currentStatus} />
+            {currentStatus === 'failed' && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: 'var(--space-4)', flexWrap: 'wrap',
+                padding: 'var(--space-4) var(--space-5)',
+                background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.25)',
+                borderRadius: 'var(--radius-lg)',
+              }}>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                  The last agent run failed. Reset the course to <strong style={{ color: 'var(--text-primary)' }}>draft</strong> to start over from Market Research.
+                </span>
+                <Button variant="danger" size="md" loading={isResetting} onClick={handleReset}>
+                  Reset to draft
+                </Button>
+              </div>
+            )}
+            <PipelineVisualizer currentStatus={currentStatus} />
+            {isHITLActive && <ApprovalQueue courseId={courseId} status={currentStatus} />}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-6)', alignItems: 'start' }}>
+              <AnalyticsCockpit courseId={courseId} />
+              <AgentLogFeed courseId={courseId} />
+            </div>
+          </>
         )}
 
-        {/* Pipeline visualizer */}
-        <PipelineVisualizer currentStatus={currentStatus} />
+        {activeTab === 'course' && <CoursePreview courseId={courseId} />}
 
-        {/* HITL gate — full width when active */}
-        {isHITLActive && (
-          <ApprovalQueue
-            courseId={courseId}
-            status={currentStatus}
-          />
+        {activeTab === 'assets' && (
+          <>
+            <SalesPagePreview courseId={courseId} />
+            <div style={{ height: 1, background: 'var(--surface-border)' }} />
+            <MarketingHub courseId={courseId} />
+          </>
         )}
 
-        {/* Course content — the actual curriculum (modules + lessons) */}
-        <CourseContent courseId={courseId} />
-
-        {/* Bottom row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-6)', alignItems: 'start' }}>
-          <AnalyticsCockpit courseId={courseId} />
-          <AgentLogFeed courseId={courseId} />
-        </div>
+        {activeTab === 'publish' && (
+          isLive ? (
+            <LiveSuccess
+              courseId={courseId}
+              onViewCourse={() => router.push(`/courses/${courseId}/preview`)}
+              onViewSales={() => setTab('assets')}
+              onViewMarketing={() => setTab('assets')}
+            />
+          ) : (
+            <div style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center', padding: 'var(--space-8) 0' }}>
+              <div style={{ fontSize: 40, marginBottom: 'var(--space-3)' }}>🚧</div>
+              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>Not published yet</h2>
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 'var(--space-5)' }}>
+                Finish the workflow — run each agent and approve each stage — to publish your course and unlock the preview link.
+              </p>
+              <Button variant="primary" onClick={() => setTab('workflow')}>Go to workflow</Button>
+            </div>
+          )
+        )}
       </main>
     </div>
   )

@@ -1,0 +1,54 @@
+'use client'
+/**
+ * LiveSuccess — celebratory "your course is ready" screen shown when a course
+ * is live, with actions to view the generated outputs and copy a preview link.
+ */
+import React, { useState } from 'react'
+import { Button } from '@/components/ui/Button'
+
+interface LiveSuccessProps {
+  courseId: string
+  onViewCourse: () => void
+  onViewSales: () => void
+  onViewMarketing: () => void
+}
+
+export function LiveSuccess({ courseId, onViewCourse, onViewSales, onViewMarketing }: LiveSuccessProps) {
+  const [shared, setShared] = useState(false)
+
+  const sharePreview = async () => {
+    const url = `${window.location.origin}/courses/${courseId}/preview`
+    try { await navigator.clipboard.writeText(url); setShared(true); setTimeout(() => setShared(false), 2000) } catch { /* ignore */ }
+  }
+
+  return (
+    <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center', padding: 'var(--space-8) 0' }}>
+      <div style={{ fontSize: 56, lineHeight: 1, marginBottom: 'var(--space-4)' }}>🎉</div>
+      <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
+        Your course is ready
+      </h1>
+      <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 'var(--space-6)' }}>
+        Everything has been generated — the full curriculum, your sales page, and a complete marketing kit. Explore what you created:
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+        <Button variant="primary" size="lg" onClick={onViewCourse} icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>}>
+          View course
+        </Button>
+        <Button variant="secondary" size="lg" onClick={onViewSales} icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>}>
+          View sales page
+        </Button>
+        <Button variant="secondary" size="lg" onClick={onViewMarketing} icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>}>
+          View marketing assets
+        </Button>
+        <Button variant="secondary" size="lg" onClick={sharePreview} icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>}>
+          {shared ? 'Link copied' : 'Share preview link'}
+        </Button>
+      </div>
+
+      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+        The preview link opens the student view of your course.
+      </p>
+    </div>
+  )
+}
