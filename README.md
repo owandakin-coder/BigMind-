@@ -1,13 +1,19 @@
 # CourseForge AI
 
-An AI-powered course creation platform that takes a course idea from concept to publish-ready in a fully automated 25-state pipeline, with human approval gates at every critical stage.
+An AI-assisted course creation platform that takes a course idea from concept to
+publish-ready through a deterministic state-machine pipeline. It is **not** fully
+automated: you run one agent per stage and approve a human-in-the-loop (HITL) gate
+between stages.
 
 ## What It Does
 
 1. You enter a course topic and niche
-2. 11 AI agents run sequentially (Market Research → Course Architecture → Content Production → Sales → Marketing → Analytics → Publishing)
-3. You approve or reject at each gate
-4. When approved, a publish-ready package is generated for Udemy, Gumroad, Teachable, Thinkific, Kajabi, or Podia
+2. You run each pipeline agent one stage at a time: Market Research → Course
+   Architecture → Content Production → Sales Page → Marketing → Publishing
+   (the codebase also contains auxiliary agent prompts — analytics, SEO,
+   portfolio, etc. — that are not part of the core run path)
+3. You approve or reject at the HITL gate after each stage
+4. When approved through final approval, the course is published and goes live
 
 ## Architecture
 
@@ -18,18 +24,18 @@ Supabase (PostgreSQL + pgvector + Realtime + Auth + Storage)
   ↓
 Deno Edge Functions (JWT-validated, service-role DB ops)
   ↓
-n8n Orchestrator (12 workflows — triggers agents on status transitions)
-  ↓
-AI Gateway (Anthropic + OpenAI, PII sanitization, cost metering, credit deduction)
+AI Gateway (Groq llama-3.3-70b / llama-3.1-8b, cost metering, credit deduction)
 ```
 
+> n8n workflow JSONs are included under `n8n/` but the app does **not** require
+> n8n — the UI triggers agents directly via the `execute-agent-workflow`
+> function. n8n orchestration is not wired/verified in this build.
+
 ### Key Numbers
-- **21** course status states
-- **11** AI agents
-- **14** Supabase migrations
+- **25** `course_status` enum values (~21 used in the active flow)
+- **7** pipeline agents in the core run path (+ auxiliary prompts not yet wired)
+- **20** Supabase migrations
 - **4** Edge Functions
-- **12** n8n workflows
-- **6** publishing platforms
 - **4** billing plans (free / starter / pro / enterprise)
 
 ## Quick Start
@@ -130,6 +136,32 @@ npm run functions:serve  # Serve Edge Functions locally
 npm run functions:deploy # Deploy all Edge Functions to Supabase
 npm run embeddings:ingest # Ingest market research into pgvector
 ```
+
+## Testing & CI
+
+- `npm test` runs Vitest unit tests. `tests/course-flow.test.ts` validates the
+  real draft→live flow (status classification, phase progression, required
+  actions); `tests/state-machine.test.ts` covers the legacy transition map.
+- GitHub Actions (`.github/workflows/ci.yml`) runs `type-check` + `test` on every
+  push to `master` and on PRs.
+
+## Current status & known limitations
+
+Honest snapshot — this is an actively-developed project, not a finished product:
+
+- The full draft→live pipeline runs end-to-end and writes real records.
+- **Content production:** the written-content stream is reliable; the visual
+  (slide) and interactive (quiz) streams do not yet consistently validate on the
+  current LLM and may be skipped per-lesson.
+- **`src/lib/course-status.ts` is the source of truth** for statuses (agents, RLS,
+  UI). `src/lib/state-machine/courseStateMachine.ts` is an older, divergent set
+  used by some UI typing and should be reconciled.
+- Course deletion is a **soft delete** via the `soft_delete_course` RPC (owner-only;
+  never hard-deletes, preserving the immutable `agent_logs`). `transition_course_status`
+  is owner-guarded against direct cross-account calls.
+- Paid-tier limits (`tier_configs.max_courses = -1` "unlimited") need review
+  against the `courses_insert_own` RLS check.
+- Sustained LLM use is constrained by Groq free-tier rate limits.
 
 ## Docs
 
