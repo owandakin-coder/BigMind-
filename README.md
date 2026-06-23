@@ -141,7 +141,8 @@ npm run embeddings:ingest # Ingest market research into pgvector
 
 - `npm test` runs Vitest unit tests. `tests/course-flow.test.ts` validates the
   real draft→live flow (status classification, phase progression, required
-  actions); `tests/state-machine.test.ts` covers the legacy transition map.
+  actions); `tests/state-machine.test.ts` covers the full transition map
+  (happy path, pivots, failures, illegal transitions, enum completeness).
 - GitHub Actions (`.github/workflows/ci.yml`) runs `type-check` + `test` on every
   push to `master` and on PRs.
 
@@ -153,9 +154,11 @@ Honest snapshot — this is an actively-developed project, not a finished produc
 - **Content production:** the written-content stream is reliable; the visual
   (slide) and interactive (quiz) streams do not yet consistently validate on the
   current LLM and may be skipped per-lesson.
-- **`src/lib/course-status.ts` is the source of truth** for statuses (agents, RLS,
-  UI). `src/lib/state-machine/courseStateMachine.ts` is an older, divergent set
-  used by some UI typing and should be reconciled.
+- **Status definitions are in sync.** `src/lib/state-machine/courseStateMachine.ts`
+  mirrors the DB `course_status` enum + `validate_state_transition()` (25 values,
+  full transition map + metadata); `src/lib/course-status.ts` provides the UI
+  helper groupings (trigger / review / terminal, phase, guidance). Both are
+  covered by unit tests.
 - Course deletion is a **soft delete** via the `soft_delete_course` RPC (owner-only;
   never hard-deletes, preserving the immutable `agent_logs`). `transition_course_status`
   is owner-guarded against direct cross-account calls.
