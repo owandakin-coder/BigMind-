@@ -28,8 +28,10 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   const isLoginPage = pathname === '/login'
+  // Public marketing surfaces — reachable without a session.
+  const isPublic = pathname === '/' || isLoginPage
 
-  if (!user && !isLoginPage) {
+  if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

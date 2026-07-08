@@ -139,3 +139,35 @@ code, pre, .font-mono {
 /* Subtle link affordance */
 .cf-navlink { transition: color var(--duration-fast, 150ms) ease; }
 .cf-navlink:hover { color: var(--text-primary) !important; }
+
+/* ── Motion (dependency-free) ──────────────────────────────── */
+@keyframes cf-fade-up   { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@keyframes cf-fade-in   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cf-float     { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+@keyframes cf-gradient-pan { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+@keyframes cf-pulse     { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes cf-shimmer   { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+
+.cf-animate-fade-up { animation: cf-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.cf-animate-fade-in { animation: cf-fade-in 0.9s ease both; }
+.cf-float           { animation: cf-float 7s ease-in-out infinite; }
+.cf-pulse           { animation: cf-pulse 4s ease-in-out infinite; }
+
+/* Animated gradient mesh (background-size must be >100% to pan) */
+.cf-mesh { background-size: 200% 200%; animation: cf-gradient-pan 16s ease infinite; }
+
+/* Scroll reveal — starts hidden, .is-visible added by IntersectionObserver.
+   Reduced-motion users get an instant snap (transition zeroed globally). */
+.cf-reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cf-reveal.is-visible { opacity: 1; transform: none; }
+
+/* Skeleton shimmer for loading states */
+.cf-skeleton {
+  background: linear-gradient(90deg, var(--surface-sunken) 25%, var(--surface-interactive) 50%, var(--surface-sunken) 75%);
+  background-size: 800px 100%;
+  animation: cf-shimmer 1.4s linear infinite;
+  border-radius: var(--radius-sm);
+}
