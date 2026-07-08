@@ -38,7 +38,27 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-indigo-400);
   outline-offset: 2px;
+  border-radius: 2px;
 }
+
+/* ── Text selection ────────────────────────────────────────── */
+::selection {
+  background: rgba(99, 102, 241, 0.35);
+  color: var(--text-primary);
+}
+
+/* ── Accessibility: respect reduced-motion ─────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Native form controls follow the dark theme ────────────── */
+:root { color-scheme: dark; }
 
 /* ── Typography helpers ────────────────────────────────────── */
 .text-xs      { font-size: var(--text-xs); }
