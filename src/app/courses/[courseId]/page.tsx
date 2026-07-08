@@ -94,7 +94,7 @@ function StatusGuidanceStrip({ courseId, status }: { courseId: string; status: C
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px,0.7fr) minmax(0,1.4fr) minmax(0,1.1fr) minmax(0,1.4fr)', gap: 'var(--space-5)' }}>
+      <div className="cf-guidance-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(120px,0.7fr) minmax(0,1.4fr) minmax(0,1.1fr) minmax(0,1.4fr)', gap: 'var(--space-5)' }}>
         <div style={cellStyle}>
           <span style={labelStyle}>Current status</span>
           <span style={{ ...valueStyle, fontFamily: 'var(--font-mono)', fontWeight: 'var(--weight-bold)' }}>{status}</span>
@@ -186,10 +186,10 @@ export default function CourseWorkspace() {
     <div style={{ minHeight: '100dvh', background: 'var(--surface-base)', display: 'flex', flexDirection: 'column' }}>
       <TopNav context={course.title} />
 
-      <div style={{ display: 'flex', flex: 1, alignItems: 'flex-start' }}>
+      <div className="cf-workspace" style={{ display: 'flex', flex: 1, alignItems: 'flex-start' }}>
         <CourseSidebar active={activeSection} onSelect={setSection} status={currentStatus} needsAttention={isHITLActive} />
 
-        <main style={{ flex: 1, minWidth: 0, padding: 'var(--space-7) var(--space-8)' }}>
+        <main className="cf-main-pad" style={{ flex: 1, minWidth: 0, padding: 'var(--space-7) var(--space-8)' }}>
           <div style={{ maxWidth: 1080, margin: '0 auto' }}>
             {activeSection === 'overview' && (
               <CourseOverview
@@ -240,7 +240,7 @@ export default function CourseWorkspace() {
                 )}
                 <PipelineVisualizer currentStatus={currentStatus} />
                 {isHITLActive && <ApprovalQueue courseId={courseId} status={currentStatus} />}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-6)', alignItems: 'start' }}>
+                <div className="cf-build-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-6)', alignItems: 'start' }}>
                   <AnalyticsCockpit courseId={courseId} />
                   <AgentLogFeed courseId={courseId} />
                 </div>

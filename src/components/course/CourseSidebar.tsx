@@ -37,14 +37,14 @@ export function CourseSidebar({ active, onSelect, status, needsAttention }: Cour
   const pct = index ? Math.round((index / total) * 100) : 0
 
   return (
-    <aside style={{
+    <aside className="cf-sidebar" style={{
       width: 232, flexShrink: 0, alignSelf: 'stretch',
       borderRight: '1px solid var(--surface-border)',
       background: 'var(--surface-raised)',
       display: 'flex', flexDirection: 'column',
       position: 'sticky', top: 60, height: 'calc(100dvh - 60px)',
     }}>
-      <nav style={{ padding: 'var(--space-4) var(--space-3)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <nav className="cf-sidebar-nav" style={{ padding: 'var(--space-4) var(--space-3)', display: 'flex', flexDirection: 'column', gap: 2 }}>
         {ORDER.map((s) => {
           const on = active === s
           return (
@@ -76,7 +76,7 @@ export function CourseSidebar({ active, onSelect, status, needsAttention }: Cour
       </nav>
 
       {/* Progress footer */}
-      <div style={{ marginTop: 'auto', padding: 'var(--space-4)', borderTop: '1px solid var(--surface-border)' }}>
+      <div className="cf-sidebar-progress" style={{ marginTop: 'auto', padding: 'var(--space-4)', borderTop: '1px solid var(--surface-border)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
           <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', fontWeight: 700 }}>Progress</span>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{pct}%</span>

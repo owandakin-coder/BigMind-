@@ -118,8 +118,8 @@ export default function LandingPage() {
           </span>
         </div>
         <nav style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 'var(--space-5)' }}>
-          <a href="#features" className="cf-navlink" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', textDecoration: 'none' }}>Features</a>
-          <a href="#how" className="cf-navlink" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', textDecoration: 'none' }}>How it works</a>
+          <a href="#features" className="cf-navlink cf-landing-nav-links" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', textDecoration: 'none' }}>Features</a>
+          <a href="#how" className="cf-navlink cf-landing-nav-links" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', textDecoration: 'none' }}>How it works</a>
           <button onClick={goStart} className="cf-btn cf-btn-primary" style={{
             border: 'none', color: '#fff', borderRadius: 'var(--radius-sm)', padding: '9px 18px',
             fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', cursor: 'pointer',
@@ -133,7 +133,7 @@ export default function LandingPage() {
           position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.9,
           background: 'radial-gradient(60% 55% at 50% 20%, rgba(99,102,241,0.22), transparent 60%), radial-gradient(50% 45% at 80% 30%, rgba(139,92,246,0.16), transparent 60%), radial-gradient(45% 45% at 15% 40%, rgba(59,130,246,0.12), transparent 60%)',
         }} />
-        <div style={{
+        <div className="cf-hero-grid" style={{
           position: 'relative', maxWidth: 1120, margin: '0 auto', display: 'grid',
           gridTemplateColumns: 'minmax(0,1.1fr) minmax(0,0.9fr)', gap: 'var(--space-8)', alignItems: 'center',
         }}>
@@ -163,7 +163,7 @@ export default function LandingPage() {
                 borderRadius: 'var(--radius-md)', padding: '14px 28px', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-medium)',
               }}>See how it works</a>
             </div>
-            <div style={{ display: 'flex', gap: 'var(--space-6)', marginTop: 'var(--space-7)', flexWrap: 'wrap' }}>
+            <div className="cf-hero-stats" style={{ display: 'flex', gap: 'var(--space-6)', marginTop: 'var(--space-7)', flexWrap: 'wrap' }}>
               {[['6-stage', 'guided pipeline'], ['Every step', 'you approve'], ['Minutes', 'not weeks']].map(([a, b]) => (
                 <div key={a}>
                   <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>{a}</div>

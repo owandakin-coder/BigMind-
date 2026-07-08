@@ -175,3 +175,30 @@ code, pre, .font-mono {
   animation: cf-shimmer 1.4s linear infinite;
   border-radius: var(--radius-sm);
 }
+
+/* ── Responsive (mobile / narrow) ──────────────────────────── */
+/* Inline styles win on specificity, so these use !important to override. */
+@media (max-width: 900px) {
+  /* Landing hero: stack text over the product mock */
+  .cf-hero-grid { grid-template-columns: 1fr !important; text-align: center; }
+  .cf-hero-grid .cf-hero-stats { justify-content: center !important; }
+}
+@media (max-width: 860px) {
+  /* Course workspace: sidebar becomes a horizontal top strip */
+  .cf-workspace { flex-direction: column !important; }
+  .cf-sidebar {
+    width: 100% !important; position: static !important; height: auto !important;
+    border-right: none !important; border-bottom: 1px solid var(--surface-border) !important;
+  }
+  .cf-sidebar-nav { flex-direction: row !important; overflow-x: auto !important; gap: 4px !important; }
+  .cf-sidebar-nav button { flex-shrink: 0; }
+  .cf-sidebar-progress { display: none !important; }
+  .cf-main-pad { padding: var(--space-5) var(--space-4) !important; }
+  /* Two-column inner grids collapse to one */
+  .cf-build-grid { grid-template-columns: 1fr !important; }
+  .cf-guidance-grid { grid-template-columns: 1fr 1fr !important; }
+}
+@media (max-width: 560px) {
+  .cf-guidance-grid { grid-template-columns: 1fr !important; }
+  .cf-landing-nav-links { display: none !important; }
+}
