@@ -164,6 +164,10 @@ code, pre, .font-mono {
 }
 .cf-reveal.is-visible { opacity: 1; transform: none; }
 
+/* Pulsing ring for the active pipeline node (SVG) */
+@keyframes cf-node-glow { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
+.cf-node-active-ring { animation: cf-node-glow 1.9s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+
 /* Skeleton shimmer for loading states */
 .cf-skeleton {
   background: linear-gradient(90deg, var(--surface-sunken) 25%, var(--surface-interactive) 50%, var(--surface-sunken) 75%);

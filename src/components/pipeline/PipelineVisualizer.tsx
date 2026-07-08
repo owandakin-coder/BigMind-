@@ -143,6 +143,17 @@ function RectNode({ node, isActive }: { node: PipelineNode; isActive: boolean })
 
   return (
     <g filter={isActive ? ACTIVE_GLOW : undefined}>
+      {isActive && (
+        <rect
+          className="cf-node-active-ring"
+          x={x - 4} y={y - 4}
+          width={NODE_W + 8} height={NODE_H + 8}
+          rx={11} ry={11}
+          fill="none"
+          stroke="var(--color-indigo-400)"
+          strokeWidth={1.5}
+        />
+      )}
       <rect
         x={x} y={y}
         width={NODE_W} height={NODE_H}
@@ -172,8 +183,13 @@ function DiamondNode({ node, isActive }: { node: PipelineNode; isActive: boolean
   const colors = TYPE_COLORS.hitl
   const points = `${cx},${cy - d} ${cx + d},${cy} ${cx},${cy + d} ${cx - d},${cy}`
 
+  const ringPoints = `${cx},${cy - d - 4} ${cx + d + 4},${cy} ${cx},${cy + d + 4} ${cx - d - 4},${cy}`
+
   return (
     <g filter={isActive ? 'drop-shadow(0 0 8px rgba(245,158,11,0.60))' : undefined}>
+      {isActive && (
+        <polygon className="cf-node-active-ring" points={ringPoints} fill="none" stroke="var(--color-amber-400)" strokeWidth={1.5} />
+      )}
       <polygon
         points={points}
         fill={isActive ? 'rgba(245,158,11,0.20)' : colors.bg}
@@ -288,10 +304,10 @@ export function PipelineVisualizer({ currentStatus, className }: PipelineVisuali
       }}>
         <div>
           <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--weight-semibold)', color: 'var(--text-primary)' }}>
-            Workflow Pipeline
+            Your course pipeline
           </h3>
           <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 2 }}>
-            21-state deterministic machine · HITL gates shown as diamonds
+            Each stage runs, then waits for your approval · diamonds are your review points
           </p>
         </div>
         <StatusPill status={currentStatus} />

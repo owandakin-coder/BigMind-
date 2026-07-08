@@ -130,8 +130,9 @@ export function AgentLogFeed({ courseId, liveLogs = [], maxRows = 50 }: AgentLog
         alignItems: 'center',
         gap: 'var(--space-3)',
       }}>
+        <span className="cf-pulse" aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-green-500)', boxShadow: '0 0 8px var(--color-green-500)' }} />
         <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--weight-semibold)', color: 'var(--text-primary)' }}>
-          Agent Activity Log
+          Agent activity
         </h3>
         {isLoading && <Spinner size={14} />}
         <Badge variant="default" style={{ marginLeft: 'auto' }}>{allLogs.length} entries</Badge>
