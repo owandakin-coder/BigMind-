@@ -75,9 +75,10 @@ export function CoursePreview({ courseId }: CoursePreviewProps) {
   return (
     <div style={{ maxWidth: 820, margin: '0 auto' }}>
       {/* Hero */}
-      <div style={{ padding: 'var(--space-7) 0 var(--space-5)', borderBottom: '1px solid var(--surface-border)' }}>
-        {tagline && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-indigo-400)', fontWeight: 'var(--weight-semibold)', marginBottom: 8 }}>{tagline}</p>}
-        <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: 10 }}>{title}</h1>
+      <div style={{ position: 'relative', padding: 'var(--space-7) 0 var(--space-5)', borderBottom: '1px solid var(--surface-border)' }}>
+        <div aria-hidden="true" style={{ position: 'absolute', top: -40, left: -80, width: 340, height: 200, pointerEvents: 'none', background: 'radial-gradient(circle at 30% 40%, rgba(99,102,241,0.14), transparent 68%)' }} />
+        {tagline && <p style={{ position: 'relative', fontSize: 'var(--text-sm)', color: 'var(--color-indigo-400)', fontWeight: 'var(--weight-semibold)', marginBottom: 8 }}>{tagline}</p>}
+        <h1 style={{ position: 'relative', fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: 10, letterSpacing: '-0.02em' }}>{title}</h1>
         {subtitle && <p style={{ fontSize: 'var(--text-lg)', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 16 }}>{subtitle}</p>}
         <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
           <span>{modules.length} modules</span><span>·</span>
