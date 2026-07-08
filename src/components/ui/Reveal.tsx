@@ -32,10 +32,14 @@ export function Reveal({ children, delay = 0, style, className }: RevealProps) {
           }
         })
       },
-      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' },
+      // Reveal well before the element scrolls into view so fast scrolling never
+      // catches it mid-fade; the animation has settled by the time it's on screen.
+      { threshold: 0, rootMargin: '0px 0px 300px 0px' },
     )
     io.observe(el)
-    return () => io.disconnect()
+    // Safety net: if the observer never fires (edge cases), force-reveal shortly.
+    const t = setTimeout(() => el.classList.add('is-visible'), 1200)
+    return () => { io.disconnect(); clearTimeout(t) }
   }, [])
 
   return (
