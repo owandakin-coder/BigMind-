@@ -1,18 +1,11 @@
 'use client'
 export const dynamic = 'force-dynamic'
 /**
- * Creator Command Center — /courses/[courseId]
+ * Course Workspace — /courses/[courseId]
  *
- * Layout (desktop, 1440px+):
- * ┌──────────────────────────────────────────────────────────┐
- * │ Header: course title · status pill · launch button       │
- * ├──────────────────────────────────────────────────────────┤
- * │ PipelineVisualizer (full width)                          │
- * ├──────────────────────────────────────────────────────────┤
- * │ ApprovalQueue (shown when HITL gate active, full width)  │
- * ├────────────────────────────┬─────────────────────────────┤
- * │ AnalyticsCockpit (60%)     │ AgentLogFeed (40%)          │
- * └────────────────────────────┴─────────────────────────────┘
+ * Product-led layout: a left nav rail leads with the course & its assets;
+ * the pipeline "Build" console sits lower. The Overview surfaces progress and
+ * the single next action. (Inverted from the old console-first tab layout.)
  */
 
 import React, { useCallback, useState } from 'react'
@@ -32,135 +25,19 @@ import { CoursePreview } from '@/components/preview/CoursePreview'
 import { SalesPagePreview } from '@/components/preview/SalesPagePreview'
 import { MarketingHub } from '@/components/preview/MarketingHub'
 import { LiveSuccess } from '@/components/preview/LiveSuccess'
-import { StatusPill } from '@/components/ui/StatusPill'
+import { CourseSidebar, type Section } from '@/components/course/CourseSidebar'
+import { CourseOverview } from '@/components/course/CourseOverview'
 import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { TopNav } from '@/components/ui/TopNav'
 
-/* ── Header ────────────────────────────────────────────────── */
+/* ── Status clarity strip (Build view) ─────────────────────── */
+// Plain-language readout: current status · next action · button · last result.
 
-interface CommandCenterHeaderProps {
-  courseId: string
-  title: string
-  niche: string
-  status: CourseStatus
-  onLaunch: () => void
-  isLaunching: boolean
-  credits: number
-}
-
-function CommandCenterHeader({ courseId, title, niche, status, onLaunch, isLaunching, credits }: CommandCenterHeaderProps) {
-  // "Agent running" reflects ACTUAL execution (the launch mutation in flight),
-  // not the status — a trigger status like architecture_design means the course
-  // is WAITING for a click, not running. (Fixes the false "Agent running" glitch.)
-  const isRunning = isLaunching
-  const isHITL    = isHumanReview(status)
-  const canLaunch = canTriggerAgent(status)
-
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 'var(--space-5)',
-      padding: 'var(--space-5) var(--space-8)',
-      background: 'var(--surface-raised)',
-      borderBottom: '1px solid var(--surface-border)',
-    }}>
-      {/* Course info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 4 }}>
-          <h1 style={{
-            fontSize: 'var(--text-xl)',
-            fontWeight: 'var(--weight-bold)',
-            color: 'var(--text-primary)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
-            {title}
-          </h1>
-          <StatusPill status={status} />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-            Niche: <span style={{ color: 'var(--text-secondary)' }}>{niche}</span>
-          </span>
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-            ID: <code style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{courseId.slice(0, 8)}</code>
-          </span>
-          {isRunning && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 'var(--text-xs)', color: 'var(--color-indigo-400)' }}>
-              <Spinner size={10} color="var(--color-indigo-400)" />
-              Agent running — this can take up to a minute…
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Right side */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexShrink: 0 }}>
-        <div style={{ textAlign: 'right' }}>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Credits remaining</p>
-          <p style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)', color: credits < 50 ? 'var(--color-amber-400)' : 'var(--text-primary)' }}>
-            {credits < 0 ? '∞' : credits.toLocaleString()}
-          </p>
-        </div>
-        {canLaunch && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 'var(--space-2)' }}>
-            {status !== 'draft' && !isLaunching && (
-              <span style={{
-                fontSize: 'var(--text-xs)',
-                color: 'var(--color-green-400)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--space-1)',
-              }}>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--color-green-400)" strokeWidth="3">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                Stage approved — ready to continue
-              </span>
-            )}
-            <Button
-              variant="primary"
-              size="lg"
-              loading={isLaunching}
-              onClick={onLaunch}
-              icon={
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
-              }
-            >
-              {`Run ${agentLabel(status)}`}
-            </Button>
-          </div>
-        )}
-        {isHITL && (
-          <Badge variant="hitl" dot style={{ fontSize: 12, padding: '6px 12px' }}>
-            Action required
-          </Badge>
-        )}
-      </div>
-    </div>
-  )
-}
-
-/* ── Status clarity strip ──────────────────────────────────── */
-// Plain-language readout of where the course is and what to do next:
-// current status · next required action · which button · last agent result.
-
-interface StatusGuidanceStripProps {
-  courseId: string
-  status: CourseStatus
-}
-
-function StatusGuidanceStrip({ courseId, status }: StatusGuidanceStripProps) {
+function StatusGuidanceStrip({ courseId, status }: { courseId: string; status: CourseStatus }) {
   const supabase = createBrowserClient()
   const guidance = statusGuidance(status)
 
-  // Last agent run outcome (most recent completion or error)
   const { data: lastResult } = useQuery({
     queryKey: ['last-agent-result', courseId, status],
     queryFn: async () => {
@@ -194,25 +71,15 @@ function StatusGuidanceStrip({ courseId, status }: StatusGuidanceStripProps) {
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   }
 
-  // Linear progress through the journey (F3: "where am I, how far to go")
   const phase = coursePhase(status)
   const pct   = phase.index ? Math.round((phase.index / phase.total) * 100) : 0
 
   return (
-    <div
-      role="status"
-      aria-label="Course status guidance"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--space-4)',
-        padding: 'var(--space-4) var(--space-5)',
-        background: 'var(--surface-raised)',
-        border: '1px solid var(--surface-border)',
-        borderRadius: 'var(--radius-lg)',
-      }}
-    >
-      {/* Phase progress + stepwise explanation */}
+    <div role="status" aria-label="Course status guidance" style={{
+      display: 'flex', flexDirection: 'column', gap: 'var(--space-4)',
+      padding: 'var(--space-4) var(--space-5)', background: 'var(--surface-raised)',
+      border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-lg)',
+    }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>
@@ -227,12 +94,7 @@ function StatusGuidanceStrip({ courseId, status }: StatusGuidanceStripProps) {
         </div>
       </div>
 
-      {/* Current status · next action · required button · last result */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(120px,0.7fr) minmax(0,1.4fr) minmax(0,1.1fr) minmax(0,1.4fr)',
-        gap: 'var(--space-5)',
-      }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px,0.7fr) minmax(0,1.4fr) minmax(0,1.1fr) minmax(0,1.4fr)', gap: 'var(--space-5)' }}>
         <div style={cellStyle}>
           <span style={labelStyle}>Current status</span>
           <span style={{ ...valueStyle, fontFamily: 'var(--font-mono)', fontWeight: 'var(--weight-bold)' }}>{status}</span>
@@ -260,50 +122,34 @@ function StatusGuidanceStrip({ courseId, status }: StatusGuidanceStripProps) {
 
 /* ── Main page ─────────────────────────────────────────────── */
 
-type TabId = 'workflow' | 'course' | 'assets' | 'publish'
-
-export default function CourseCommandCenter() {
+export default function CourseWorkspace() {
   const params   = useParams<{ courseId: string }>()
   const courseId = params.courseId
   const supabase = createBrowserClient()
   const router   = useRouter()
-  const [tab, setTab] = useState<TabId | null>(null)
+  const [section, setSection] = useState<Section | null>(null)
 
-  // ── Fetch course ──────────────────────────────────────────
   const { data: course, isLoading, error } = useQuery({
     queryKey: ['course', courseId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('id', courseId)
-        .single()
+      const { data, error } = await supabase.from('courses').select('*').eq('id', courseId).single()
       if (error) throw error
       return data
     },
   })
 
-  // ── Real-time (updates query cache in place) ─────────────
   useRealtimeCourse(courseId)
 
-  // ── Current status ────────────────────────────────────────
   const currentStatus: CourseStatus = (course?.status ?? 'draft') as CourseStatus
-
-  // ── Credits ───────────────────────────────────────────────
   const { data: creditsInfo } = useCredits()
   const credits = creditsInfo?.ai_credits ?? 0
 
-  // ── Launch workflow ───────────────────────────────────────
   const { mutate: launchAgent, isPending: isLaunching } = useCourseAgent()
-
   const handleLaunch = useCallback(() => {
     if (!course?.target_niche) return
     launchAgent({ courseId, niche: course.target_niche })
   }, [launchAgent, courseId, course?.target_niche])
 
-  // ── Reset a failed course back to draft (F5: failed was a dead-end) ──
-  // Uses the existing transition_course_status RPC (failed→draft is a valid
-  // state-machine transition). No agents/workflows/policies changed.
   const queryClient = useQueryClient()
   const { mutate: resetCourse, isPending: isResetting } = useMutation({
     mutationFn: async () => {
@@ -316,14 +162,12 @@ export default function CourseCommandCenter() {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['course', courseId] }),
   })
-
   const handleReset = useCallback(() => {
     if (window.confirm('Reset this course to draft?\n\nThis clears the failed run so you can start over from Market Research. Generated drafts remain in the database.')) {
       resetCourse()
     }
   }, [resetCourse])
 
-  // ── Loading / error states ────────────────────────────────
   if (isLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: 'var(--surface-base)' }}>
@@ -331,114 +175,100 @@ export default function CourseCommandCenter() {
       </div>
     )
   }
-
-  if (error || !course) {
-    return notFound()
-  }
+  if (error || !course) return notFound()
 
   const isHITLActive = isHumanReview(currentStatus)
   const isLive       = currentStatus === 'live' || currentStatus === 'live_analytics'
-  const activeTab: TabId = tab ?? (isLive ? 'publish' : 'workflow')
-
-  const TABS: { id: TabId; label: string }[] = [
-    { id: 'workflow', label: 'Workflow' },
-    { id: 'course',   label: 'Course' },
-    { id: 'assets',   label: 'Assets' },
-    { id: 'publish',  label: 'Publish' },
-  ]
+  const isFailed     = currentStatus === 'failed'
+  const activeSection: Section = section ?? 'overview'
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--surface-base)', display: 'flex', flexDirection: 'column' }}>
       <TopNav context={course.title} />
 
-      {/* Header */}
-      <CommandCenterHeader
-        courseId={courseId}
-        title={course.title}
-        niche={course.target_niche}
-        status={currentStatus}
-        onLaunch={handleLaunch}
-        isLaunching={isLaunching}
-        credits={credits}
-      />
+      <div style={{ display: 'flex', flex: 1, alignItems: 'flex-start' }}>
+        <CourseSidebar active={activeSection} onSelect={setSection} status={currentStatus} needsAttention={isHITLActive} />
 
-      {/* Tab navigation */}
-      <nav style={{ display: 'flex', gap: 'var(--space-1)', padding: '0 var(--space-8)', borderBottom: '1px solid var(--surface-border)', background: 'var(--surface-raised)' }}>
-        {TABS.map(t => {
-          const on = activeTab === t.id
-          return (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              background: 'transparent', border: 'none', cursor: 'pointer',
-              padding: 'var(--space-3) var(--space-4)', fontSize: 'var(--text-sm)',
-              fontWeight: on ? 'var(--weight-semibold)' : 'var(--weight-regular)',
-              color: on ? 'var(--text-primary)' : 'var(--text-tertiary)',
-              borderBottom: on ? '2px solid var(--color-indigo-400)' : '2px solid transparent',
-              marginBottom: -1,
-            }}>{t.label}</button>
-          )
-        })}
-      </nav>
+        <main style={{ flex: 1, minWidth: 0, padding: 'var(--space-7) var(--space-8)' }}>
+          <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+            {activeSection === 'overview' && (
+              <CourseOverview
+                title={course.title}
+                niche={course.target_niche}
+                status={currentStatus}
+                credits={credits}
+                canRun={canTriggerAgent(currentStatus)}
+                runLabel={`Run ${agentLabel(currentStatus)}`}
+                onRun={handleLaunch}
+                isLaunching={isLaunching}
+                isHITL={isHITLActive}
+                isLive={isLive}
+                isFailed={isFailed}
+                onReset={handleReset}
+                isResetting={isResetting}
+                onNavigate={setSection}
+              />
+            )}
 
-      {/* Body */}
-      <main style={{ flex: 1, padding: 'var(--space-6) var(--space-8)', display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-        {activeTab === 'workflow' && (
-          <>
-            <StatusGuidanceStrip courseId={courseId} status={currentStatus} />
-            {currentStatus === 'failed' && (
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                gap: 'var(--space-4)', flexWrap: 'wrap',
-                padding: 'var(--space-4) var(--space-5)',
-                background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.25)',
-                borderRadius: 'var(--radius-lg)',
-              }}>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                  The last agent run failed. Reset the course to <strong style={{ color: 'var(--text-primary)' }}>draft</strong> to start over from Market Research.
-                </span>
-                <Button variant="danger" size="md" loading={isResetting} onClick={handleReset}>
-                  Reset to draft
-                </Button>
+            {activeSection === 'course'    && <CoursePreview courseId={courseId} />}
+            {activeSection === 'sales'      && <SalesPagePreview courseId={courseId} />}
+            {activeSection === 'marketing'  && <MarketingHub courseId={courseId} />}
+
+            {activeSection === 'build' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                <StatusGuidanceStrip courseId={courseId} status={currentStatus} />
+                {isFailed && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-4)', flexWrap: 'wrap',
+                    padding: 'var(--space-4) var(--space-5)', background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.25)', borderRadius: 'var(--radius-lg)' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                      The last agent run failed. Reset the course to <strong style={{ color: 'var(--text-primary)' }}>draft</strong> to start over from Market Research.
+                    </span>
+                    <Button variant="danger" size="md" loading={isResetting} onClick={handleReset}>Reset to draft</Button>
+                  </div>
+                )}
+                {canTriggerAgent(currentStatus) && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-4)', flexWrap: 'wrap',
+                    padding: 'var(--space-4) var(--space-5)', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 'var(--radius-lg)' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                      Ready to run the <strong style={{ color: 'var(--text-primary)' }}>{agentLabel(currentStatus)}</strong>. This uses AI credits.
+                    </span>
+                    <Button variant="primary" size="md" loading={isLaunching} onClick={handleLaunch}
+                      icon={<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>}>
+                      {`Run ${agentLabel(currentStatus)}`}
+                    </Button>
+                  </div>
+                )}
+                <PipelineVisualizer currentStatus={currentStatus} />
+                {isHITLActive && <ApprovalQueue courseId={courseId} status={currentStatus} />}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-6)', alignItems: 'start' }}>
+                  <AnalyticsCockpit courseId={courseId} />
+                  <AgentLogFeed courseId={courseId} />
+                </div>
               </div>
             )}
-            <PipelineVisualizer currentStatus={currentStatus} />
-            {isHITLActive && <ApprovalQueue courseId={courseId} status={currentStatus} />}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-6)', alignItems: 'start' }}>
-              <AnalyticsCockpit courseId={courseId} />
-              <AgentLogFeed courseId={courseId} />
-            </div>
-          </>
-        )}
 
-        {activeTab === 'course' && <CoursePreview courseId={courseId} />}
-
-        {activeTab === 'assets' && (
-          <>
-            <SalesPagePreview courseId={courseId} />
-            <div style={{ height: 1, background: 'var(--surface-border)' }} />
-            <MarketingHub courseId={courseId} />
-          </>
-        )}
-
-        {activeTab === 'publish' && (
-          isLive ? (
-            <LiveSuccess
-              courseId={courseId}
-              onViewCourse={() => router.push(`/courses/${courseId}/preview`)}
-              onViewSales={() => setTab('assets')}
-              onViewMarketing={() => setTab('assets')}
-            />
-          ) : (
-            <div style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center', padding: 'var(--space-8) 0' }}>
-              <div style={{ fontSize: 40, marginBottom: 'var(--space-3)' }}>🚧</div>
-              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>Not published yet</h2>
-              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 'var(--space-5)' }}>
-                Finish the workflow — run each agent and approve each stage — to publish your course and unlock the preview link.
-              </p>
-              <Button variant="primary" onClick={() => setTab('workflow')}>Go to workflow</Button>
-            </div>
-          )
-        )}
-      </main>
+            {activeSection === 'publish' && (
+              isLive ? (
+                <LiveSuccess
+                  courseId={courseId}
+                  onViewCourse={() => router.push(`/courses/${courseId}/preview`)}
+                  onViewSales={() => setSection('sales')}
+                  onViewMarketing={() => setSection('marketing')}
+                />
+              ) : (
+                <div style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center', padding: 'var(--space-8) 0' }}>
+                  <div style={{ fontSize: 40, marginBottom: 'var(--space-3)' }}>🚧</div>
+                  <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>Not published yet</h2>
+                  <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 'var(--space-5)' }}>
+                    Finish the pipeline — run each agent and approve each stage — to publish your course and unlock the preview link.
+                  </p>
+                  <Button variant="primary" onClick={() => setSection('build')}>Go to Build</Button>
+                </div>
+              )
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
