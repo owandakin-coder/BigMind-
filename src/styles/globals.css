@@ -93,3 +93,49 @@ code, pre, .font-mono {
   padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0,0,0,0); white-space: nowrap; border-width: 0;
 }
+
+/* ── Interactive polish (shared) ───────────────────────────── */
+
+/* Gradient brand text (wordmark accents, hero highlights) */
+.cf-gradient-text {
+  background: linear-gradient(135deg, var(--color-indigo-300), var(--color-violet-400));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Lift + brighten border on hover — for clickable cards */
+.cf-hover-lift {
+  transition: transform var(--duration-fast, 150ms) ease,
+              border-color var(--duration-fast, 150ms) ease,
+              box-shadow var(--duration-fast, 150ms) ease;
+  will-change: transform;
+}
+.cf-hover-lift:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-indigo-500) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Button hover states (layered over inline variant styles) */
+.cf-btn { transition: filter var(--duration-fast, 150ms) ease,
+                      box-shadow var(--duration-fast, 150ms) ease,
+                      background var(--duration-fast, 150ms) ease,
+                      border-color var(--duration-fast, 150ms) ease; }
+.cf-btn-primary {
+  background-image: linear-gradient(135deg, var(--color-indigo-500), var(--color-indigo-600)) !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.28);
+}
+.cf-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 6px 22px rgba(99, 102, 241, 0.42);
+}
+.cf-btn-secondary:hover:not(:disabled) { border-color: var(--color-grey-600) !important; filter: brightness(1.1); }
+.cf-btn-ghost:hover:not(:disabled)     { background: var(--surface-interactive) !important; color: var(--text-primary) !important; }
+.cf-btn-danger:hover:not(:disabled)    { filter: brightness(1.12); }
+.cf-btn-success:hover:not(:disabled)   { filter: brightness(1.12); }
+
+/* Subtle link affordance */
+.cf-navlink { transition: color var(--duration-fast, 150ms) ease; }
+.cf-navlink:hover { color: var(--text-primary) !important; }

@@ -36,6 +36,7 @@ import { StatusPill } from '@/components/ui/StatusPill'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
+import { TopNav } from '@/components/ui/TopNav'
 
 /* ── Header ────────────────────────────────────────────────── */
 
@@ -65,9 +66,6 @@ function CommandCenterHeader({ courseId, title, niche, status, onLaunch, isLaunc
       padding: 'var(--space-5) var(--space-8)',
       background: 'var(--surface-raised)',
       borderBottom: '1px solid var(--surface-border)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 'var(--z-raised)',
     }}>
       {/* Course info */}
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -351,6 +349,8 @@ export default function CourseCommandCenter() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--surface-base)', display: 'flex', flexDirection: 'column' }}>
+      <TopNav context={course.title} />
+
       {/* Header */}
       <CommandCenterHeader
         courseId={courseId}

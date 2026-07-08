@@ -22,10 +22,15 @@ export function LiveSuccess({ courseId, onViewCourse, onViewSales, onViewMarketi
   }
 
   return (
-    <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center', padding: 'var(--space-8) 0' }}>
-      <div style={{ fontSize: 56, lineHeight: 1, marginBottom: 'var(--space-4)' }}>🎉</div>
-      <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)' }}>
-        Your course is ready
+    <div style={{ position: 'relative', maxWidth: 560, margin: '0 auto', textAlign: 'center', padding: 'var(--space-8) 0' }}>
+      <div aria-hidden="true" style={{
+        position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+        width: 460, height: 260, pointerEvents: 'none',
+        background: 'radial-gradient(circle at 50% 30%, rgba(34,197,94,0.16), rgba(99,102,241,0.10) 45%, transparent 72%)',
+      }} />
+      <div style={{ position: 'relative', fontSize: 56, lineHeight: 1, marginBottom: 'var(--space-4)' }}>🎉</div>
+      <h1 style={{ position: 'relative', fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', marginBottom: 'var(--space-2)', letterSpacing: '-0.01em' }}>
+        Your course is <span className="cf-gradient-text">ready</span>
       </h1>
       <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 'var(--space-6)' }}>
         Everything has been generated — the full curriculum, your sales page, and a complete marketing kit. Explore what you created:

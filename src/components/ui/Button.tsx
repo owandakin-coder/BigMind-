@@ -32,6 +32,14 @@ const VARIANT_STYLES: Record<ButtonVariant, React.CSSProperties> = {
   },
 }
 
+const VARIANT_CLASS: Record<ButtonVariant, string> = {
+  primary:   'cf-btn cf-btn-primary',
+  secondary: 'cf-btn cf-btn-secondary',
+  ghost:     'cf-btn cf-btn-ghost',
+  danger:    'cf-btn cf-btn-danger',
+  success:   'cf-btn cf-btn-success',
+}
+
 const SIZE_STYLES: Record<ButtonSize, React.CSSProperties> = {
   sm: { height: 32, padding: '0 12px', fontSize: 'var(--text-sm)',  borderRadius: 'var(--radius-sm)' },
   md: { height: 40, padding: '0 16px', fontSize: 'var(--text-base)', borderRadius: 'var(--radius-md)' },
@@ -55,6 +63,7 @@ export function Button({
   children,
   disabled,
   style,
+  className,
   ...props
 }: ButtonProps) {
   const isDisabled = disabled || loading
@@ -62,6 +71,7 @@ export function Button({
   return (
     <button
       disabled={isDisabled}
+      className={[VARIANT_CLASS[variant], className].filter(Boolean).join(' ')}
       style={{
         display: 'inline-flex',
         alignItems: 'center',

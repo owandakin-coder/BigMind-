@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
+import { TopNav } from '@/components/ui/TopNav'
 import type { CourseStatus } from '@/lib/state-machine/courseStateMachine'
 import type { Database } from '@/types/database.types'
 
@@ -226,7 +227,8 @@ function CourseCard({ course }: { course: Course }) {
 
   return (
     <Card
-      style={{ cursor: 'pointer', transition: 'border-color 0.15s' }}
+      className="cf-hover-lift"
+      style={{ cursor: 'pointer' }}
       onClick={() => router.push(`/courses/${course.id}`)}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-4)' }}>
@@ -290,53 +292,68 @@ export default function DashboardPage() {
   const { data: courses, isLoading, isError } = useCourseLibrary()
   const [showNew, setShowNew] = useState(false)
 
-  if (isLoading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      <Spinner size={32} />
-    </div>
-  )
-
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: 'var(--space-8) var(--space-6)' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-8)' }}>
-        <div>
-          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>
-            Course Library
-          </h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)' }}>
-            {courses?.length ?? 0} course{courses?.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <Button variant="primary" onClick={() => setShowNew(true)}>
-          + New Course
-        </Button>
-      </div>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+      <TopNav />
 
-      {/* Credit bar */}
-      <div style={{ marginBottom: 'var(--space-6)' }}>
-        <CreditBar />
-      </div>
+      {/* Ambient hero glow */}
+      <div style={{ position: 'relative' }}>
+        <div aria-hidden="true" style={{
+          position: 'absolute', top: -120, left: '50%', transform: 'translateX(-50%)',
+          width: 800, height: 340, pointerEvents: 'none',
+          background: 'radial-gradient(circle at 50% 40%, rgba(99,102,241,0.16), rgba(139,92,246,0.06) 40%, transparent 70%)',
+        }} />
 
-      {/* Course grid */}
-      {isError ? (
-        <EmptyState
-          title="Failed to load courses"
-          description="Check your connection and try refreshing."
-        />
-      ) : !courses?.length ? (
-        <EmptyState
-          title="No courses yet"
-          description="Create your first AI-powered course to get started."
-          action={<Button variant="primary" onClick={() => setShowNew(true)}>+ Create Course</Button>}
-        />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          {courses.map(course => (
-            <CourseCard key={course.id} course={course} />
-          ))}
+        <div style={{ position: 'relative', maxWidth: 1040, margin: '0 auto', width: '100%', padding: 'var(--space-8) var(--space-6)' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 'var(--space-4)', marginBottom: 'var(--space-7)', flexWrap: 'wrap' }}>
+            <div>
+              <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                Your <span className="cf-gradient-text">Course Library</span>
+              </h1>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 'var(--space-2)' }}>
+                {courses?.length
+                  ? `${courses.length} course${courses.length !== 1 ? 's' : ''} · from idea to live in minutes`
+                  : 'Turn one idea into a complete course — content, sales page, and marketing.'}
+              </p>
+            </div>
+            <Button variant="primary" size="lg" onClick={() => setShowNew(true)} icon={
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            }>
+              New Course
+            </Button>
+          </div>
+
+          {/* Credit bar */}
+          <div style={{ marginBottom: 'var(--space-6)' }}>
+            {isLoading ? null : <CreditBar />}
+          </div>
+
+          {/* Course grid */}
+          {isLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-8) 0' }}>
+              <Spinner size={32} />
+            </div>
+          ) : isError ? (
+            <EmptyState
+              title="Failed to load courses"
+              description="Check your connection and try refreshing."
+            />
+          ) : !courses?.length ? (
+            <EmptyState
+              title="No courses yet"
+              description="Create your first AI-powered course to get started."
+              action={<Button variant="primary" onClick={() => setShowNew(true)}>+ Create Course</Button>}
+            />
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 'var(--space-4)' }}>
+              {courses.map(course => (
+                <CourseCard key={course.id} course={course} />
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {showNew && <NewCourseModal onClose={() => setShowNew(false)} />}
     </div>
