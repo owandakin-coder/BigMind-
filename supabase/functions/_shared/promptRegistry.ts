@@ -305,6 +305,85 @@ For INTERACTIVE content respond with:
   }
 }`
   },
+
+  /**
+   * Combined prompt — produces written + visual + interactive for one lesson in
+   * a SINGLE call. Replaces the 3-parallel-call approach that starved the
+   * rate-limited 8b model (visual/interactive almost always dropped).
+   */
+  buildCombinedSystemPrompt(): string {
+    return `You are the Content Production team for CourseForge AI. For each lesson you produce a COMPLETE package in one response: (1) the written lesson, (2) a slide outline, and (3) an interactive quiz + worksheet.
+
+${JSON_ONLY_INSTRUCTION}
+
+${QUALITY_STANDARDS}
+
+RULES:
+- Always produce ALL THREE parts. Never omit "written", "visual", or "interactive".
+- Written uses C.O.R.E. (Hook → Concept → Exercise → Quiz), active voice, short paragraphs, concrete niche examples.
+- Slides: one idea per slide, clear presenter notes.
+- Quiz: application-focused questions, plausible distractors, teaching explanations.
+- Real, substantive content only — never placeholders.`
+  },
+
+  buildCombinedUserPrompt(ctx: {
+    lessonTitle: string
+    coreConcept: string
+    hook: string
+    niche: string
+    moduleTitle: string
+    isMVC: boolean
+  }): string {
+    return `Create the COMPLETE content package for this lesson.
+
+Title: "${ctx.lessonTitle}"
+Module: "${ctx.moduleTitle}"
+Core Concept: ${ctx.coreConcept || ctx.hook || 'See lesson title'}
+Course Niche: ${ctx.niche}
+${ctx.isMVC ? '⭐ MVC lesson — deliver immediate, focused, actionable value.' : ''}
+
+Respond with ONLY a JSON object having EXACTLY these three top-level keys (no markdown, no code fences):
+{
+  "written": {
+    "title": "${ctx.lessonTitle}",
+    "body_markdown": "<complete lesson in markdown, MINIMUM 250 words: headings, short paragraphs, concrete ${ctx.niche} examples, and a practice exercise>",
+    "key_takeaways": ["<takeaway 1>", "<takeaway 2>", "<takeaway 3>"],
+    "call_to_action": "<specific next action the student takes now>",
+    "word_count": <integer>,
+    "reading_time_minutes": <integer>
+  },
+  "visual": {
+    "slide_deck_outline": [
+      { "slide_number": 1, "title": "<title slide>", "content_type": "title", "notes": "<presenter notes>" },
+      { "slide_number": 2, "title": "<core concept>", "content_type": "concept", "notes": "<notes>" },
+      { "slide_number": 3, "title": "<worked example>", "content_type": "example", "notes": "<notes>" },
+      { "slide_number": 4, "title": "<key takeaways>", "content_type": "summary", "notes": "<notes>" }
+    ],
+    "infographic_briefs": [],
+    "thumbnail_prompt": "<image generation prompt for the lesson thumbnail>"
+  },
+  "interactive": {
+    "quiz": {
+      "questions": [
+        { "question": "<applied question 1>", "options": ["<A>", "<B>", "<C>", "<D>"], "correct_index": 0, "explanation": "<why correct>" },
+        { "question": "<applied question 2>", "options": ["<A>", "<B>", "<C>", "<D>"], "correct_index": 1, "explanation": "<why correct>" },
+        { "question": "<applied question 3>", "options": ["<A>", "<B>", "<C>", "<D>"], "correct_index": 2, "explanation": "<why correct>" }
+      ],
+      "passing_score": 70
+    },
+    "worksheet": {
+      "title": "<worksheet title>",
+      "instructions": "<how to complete it>",
+      "exercises": [
+        { "number": 1, "prompt": "<actionable exercise>", "type": "action_item" },
+        { "number": 2, "prompt": "<reflection prompt>", "type": "reflection" }
+      ]
+    }
+  }
+}
+
+Generate real, substantive content for the "${ctx.niche}" niche. Do not truncate or use placeholders.`
+  },
 }
 
 /* ══════════════════════════════════════════════════════════════

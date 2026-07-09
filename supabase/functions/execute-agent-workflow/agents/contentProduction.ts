@@ -1,11 +1,10 @@
 /**
  * contentProduction.ts — Content Production Agent handler.
  *
- * Uses Promise.all parallel streams:
- *   [written, visual, interactive] generated simultaneously.
- *
- * Each lesson generates all 3 asset types.
- * MVC lessons are processed first.
+ * Each lesson generates all 3 asset types (written, visual, interactive) via a
+ * SINGLE combined llama-3.3-70b call (8b fallback), then validates each stream
+ * independently. One call per lesson avoids the 8b rate-limit starvation that
+ * used to drop the visual/interactive assets. MVC lessons are processed first.
  */
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.0'
@@ -64,19 +63,17 @@ export async function runContentProduction(
 
   telemetry.dbWrite('lessons', sortedLessons.length)
 
-  const systemWritten      = contentProductionPrompts.buildWrittenSystemPrompt()
-  const systemVisual       = contentProductionPrompts.buildVisualSystemPrompt()
-  const systemInteractive  = contentProductionPrompts.buildInteractiveSystemPrompt()
+  const systemCombined = contentProductionPrompts.buildCombinedSystemPrompt()
 
   let totalAssets = 0
   const writtenCount   = { success: 0, failed: 0 }
   const visualCount    = { success: 0, failed: 0 }
   const interactiveCount = { success: 0, failed: 0 }
 
-  // ── 2. Process lessons — parallel asset generation ───────
+  // ── 2. Process lessons — one combined call each ──────────
   for (const lesson of sortedLessons) {
     const modData = lesson.modules as unknown as ModuleData
-    const userPrompt = contentProductionPrompts.buildUserPrompt({
+    const userPrompt = contentProductionPrompts.buildCombinedUserPrompt({
       lessonTitle:  lesson.title,
       coreConcept:  lesson.context_hook ?? '',
       hook:         lesson.context_hook ?? '',
@@ -85,13 +82,15 @@ export async function runContentProduction(
       isMVC:        modData.is_mvc,
     })
 
-    // Parallel generation of all 3 asset types
-    const [writtenResult, visualResult, interactiveResult] = await Promise.allSettled([
-      // Written content
-      withRetry(
+    // ── 2. Single combined 70b call (8b fallback) → all three streams ─
+    // One call per lesson instead of three separate ones: avoids the 8b
+    // rate-limit starvation that used to drop visual/interactive assets.
+    let combined: { result: string } | null = null
+    try {
+      combined = await withRetry(
         async () => {
           const resp = await callAIGateway({
-            model: 'llama-3.3-70b-versatile', systemPrompt: systemWritten,
+            model: 'llama-3.3-70b-versatile', systemPrompt: systemCombined,
             userPrompt, maxTokens: 4096,
             courseId, userId, agentName: AGENT_NAME, creditCost: 0, serviceClient,
           })
@@ -99,106 +98,54 @@ export async function runContentProduction(
         },
         async () => {
           const resp = await callAIGateway({
-            model: 'llama-3.1-8b-instant', systemPrompt: systemWritten, userPrompt, maxTokens: 4096,
+            model: 'llama-3.1-8b-instant', systemPrompt: systemCombined,
+            userPrompt, maxTokens: 4096,
             courseId, userId, agentName: AGENT_NAME, creditCost: 0, serviceClient,
           })
           return resp.content
         },
         AGENT_NAME, courseId, { ...DEFAULT_RETRY_CONFIG, maxAttempts: 2 }
-      ),
+      ) as { result: string }
+    } catch {
+      combined = null
+    }
 
-      // Visual content
-      withRetry(
-        async () => {
-          const resp = await callAIGateway({
-            model: 'llama-3.1-8b-instant', systemPrompt: systemVisual,
-            userPrompt, maxTokens: 2048,
-            courseId, userId, agentName: AGENT_NAME, creditCost: 0, serviceClient,
-          })
-          return resp.content
-        },
-        null,
-        AGENT_NAME, courseId, { ...DEFAULT_RETRY_CONFIG, maxAttempts: 2 }
-      ),
-
-      // Interactive content
-      withRetry(
-        async () => {
-          const resp = await callAIGateway({
-            model: 'llama-3.1-8b-instant', systemPrompt: systemInteractive,
-            userPrompt, maxTokens: 3000,
-            courseId, userId, agentName: AGENT_NAME, creditCost: 0, serviceClient,
-          })
-          return resp.content
-        },
-        null,
-        AGENT_NAME, courseId, { ...DEFAULT_RETRY_CONFIG, maxAttempts: 2 }
-      ),
-    ])
-
-    // ── 3. Persist each asset type ──────────────────────────
+    // ── 3. Parse + validate each stream independently, then persist ──
     const assetInserts: Array<{
       source_type: string; source_id: string;
       asset_type: string; content_json: Record<string, unknown>;
       is_active: boolean;
     }> = []
 
-    if (writtenResult.status === 'fulfilled') {
-      const parsed = parseJsonSafe(writtenResult.value.result, {})
-      const valid  = WrittenContentOutputSchema.safeParse({ ...parsed, lesson_id: lesson.id })
-      if (valid.success) {
-        assetInserts.push({
-          source_type:  'lesson',
-          source_id:    lesson.id,
-          asset_type:   'lesson_script',
-          content_json: valid.data as unknown as Record<string, unknown>,
-          is_active:    true,
-        })
+    if (!combined) {
+      writtenCount.failed++; visualCount.failed++; interactiveCount.failed++
+    } else {
+      const parsed = parseJsonSafe(combined.result, {}) as Record<string, unknown>
+
+      const wValid = WrittenContentOutputSchema.safeParse({ ...(parsed.written as Record<string, unknown> ?? {}), lesson_id: lesson.id })
+      if (wValid.success) {
+        assetInserts.push({ source_type: 'lesson', source_id: lesson.id, asset_type: 'lesson_script', content_json: wValid.data as unknown as Record<string, unknown>, is_active: true })
         writtenCount.success++
       } else {
         writtenCount.failed++
-        telemetry.validationFailed([`Written content for lesson ${lesson.id}: ${valid.error.message}`])
+        telemetry.validationFailed([`Written content for lesson ${lesson.id}: ${wValid.error.message}`])
       }
-    } else {
-      writtenCount.failed++
-    }
 
-    if (visualResult.status === 'fulfilled') {
-      const parsed = parseJsonSafe(visualResult.value.result, {})
-      const valid  = VisualContentOutputSchema.safeParse({ ...parsed, lesson_id: lesson.id })
-      if (valid.success) {
-        assetInserts.push({
-          source_type:  'lesson',
-          source_id:    lesson.id,
-          asset_type:   'slide_outline',
-          content_json: valid.data as unknown as Record<string, unknown>,
-          is_active:    true,
-        })
+      const vValid = VisualContentOutputSchema.safeParse({ ...(parsed.visual as Record<string, unknown> ?? {}), lesson_id: lesson.id })
+      if (vValid.success) {
+        assetInserts.push({ source_type: 'lesson', source_id: lesson.id, asset_type: 'slide_outline', content_json: vValid.data as unknown as Record<string, unknown>, is_active: true })
         visualCount.success++
       } else {
         visualCount.failed++
       }
-    } else {
-      visualCount.failed++
-    }
 
-    if (interactiveResult.status === 'fulfilled') {
-      const parsed = parseJsonSafe(interactiveResult.value.result, {})
-      const valid  = InteractiveContentOutputSchema.safeParse({ ...parsed, lesson_id: lesson.id })
-      if (valid.success) {
-        assetInserts.push({
-          source_type:  'lesson',
-          source_id:    lesson.id,
-          asset_type:   'quiz_json',
-          content_json: valid.data as unknown as Record<string, unknown>,
-          is_active:    true,
-        })
+      const iValid = InteractiveContentOutputSchema.safeParse({ ...(parsed.interactive as Record<string, unknown> ?? {}), lesson_id: lesson.id })
+      if (iValid.success) {
+        assetInserts.push({ source_type: 'lesson', source_id: lesson.id, asset_type: 'quiz_json', content_json: iValid.data as unknown as Record<string, unknown>, is_active: true })
         interactiveCount.success++
       } else {
         interactiveCount.failed++
       }
-    } else {
-      interactiveCount.failed++
     }
 
     if (assetInserts.length > 0) {
@@ -208,6 +155,10 @@ export async function runContentProduction(
 
       if (!assetErr) totalAssets += assetInserts.length
     }
+
+    // Throttle between lessons to stay under Groq's per-minute token budget.
+    // Rate-limit errors are non-retryable, so the goal is to never trip them.
+    await new Promise((r) => setTimeout(r, 2500))
   }
 
   telemetry.dbWrite('digital_assets', totalAssets)
