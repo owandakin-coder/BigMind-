@@ -6,12 +6,15 @@
 import React from 'react'
 import { StatusPill } from '@/components/ui/StatusPill'
 import { Button } from '@/components/ui/Button'
+import { Spinner } from '@/components/ui/Spinner'
 import { PhaseStepper } from './PhaseStepper'
 import type { Section } from './CourseSidebar'
 import { statusGuidance } from '@/lib/course-status'
 import type { CourseStatus } from '@/lib/state-machine/courseStateMachine'
+import { useAutoPilot } from '@/hooks/useAutoPilot'
 
 interface CourseOverviewProps {
+  courseId: string
   title: string
   niche: string
   status: CourseStatus
@@ -47,6 +50,18 @@ function QuickLink({ icon, label, desc, onClick }: { icon: React.ReactNode; labe
 
 export function CourseOverview(p: CourseOverviewProps) {
   const guidance = statusGuidance(p.status)
+  const { state: ap, start: startAutoPilot, stop: stopAutoPilot } = useAutoPilot(p.courseId, p.niche)
+
+  // Auto-pilot is offered whenever there's pipeline work left to do.
+  const canAutoPilot = !p.isLive && !p.isFailed && (p.canRun || p.isHITL)
+
+  const handleAutoPilot = () => {
+    if (window.confirm(
+      'Auto-pilot will run every remaining agent and approve every stage automatically — all the way to live, without stopping for manual review.\n\nThis uses AI credits. You can stop it at any time.\n\nContinue?'
+    )) {
+      startAutoPilot()
+    }
+  }
 
   // Which primary action to surface.
   let cta: React.ReactNode = null
@@ -104,15 +119,42 @@ export function CourseOverview(p: CourseOverviewProps) {
           {/* Next action block */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-4)', flexWrap: 'wrap',
             marginTop: 'var(--space-6)', padding: 'var(--space-5)', borderRadius: 'var(--radius-lg)',
-            background: 'rgba(10,10,15,0.5)', border: '1px solid var(--surface-border)' }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', fontWeight: 700, marginBottom: 4 }}>
-                Next step
-              </div>
-              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-semibold)', color: 'var(--text-primary)', marginBottom: 2 }}>{ctaHeadline}</div>
-              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{guidance.nextAction}</div>
-            </div>
-            {cta && <div style={{ flexShrink: 0 }}>{cta}</div>}
+            background: 'rgba(10,10,15,0.5)', border: `1px solid ${ap.running ? 'rgba(99,102,241,0.4)' : 'var(--surface-border)'}` }}>
+            {ap.running ? (
+              <>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-indigo-300)', fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Spinner size={12} color="var(--color-indigo-300)" /> Auto-pilot running
+                  </div>
+                  <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--text-primary)' }}>{ap.step}</div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 2 }}>Running agents and approving each stage for you. This can take a few minutes.</div>
+                </div>
+                <Button variant="secondary" size="md" onClick={stopAutoPilot} style={{ flexShrink: 0 }}>Stop</Button>
+              </>
+            ) : (
+              <>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', fontWeight: 700, marginBottom: 4 }}>
+                    Next step
+                  </div>
+                  <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-semibold)', color: 'var(--text-primary)', marginBottom: 2 }}>{ctaHeadline}</div>
+                  <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                    {ap.error ? <span style={{ color: 'var(--color-red-400)' }}>Auto-pilot stopped: {ap.error}</span>
+                      : ap.step && !ap.done ? ap.step
+                      : guidance.nextAction}
+                  </div>
+                </div>
+                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', alignItems: 'stretch' }}>
+                  {cta}
+                  {canAutoPilot && (
+                    <Button variant="secondary" size={cta ? 'sm' : 'lg'} onClick={handleAutoPilot}
+                      icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>}>
+                      Auto-pilot to live
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

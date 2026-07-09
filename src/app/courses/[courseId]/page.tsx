@@ -193,6 +193,7 @@ export default function CourseWorkspace() {
           <div style={{ maxWidth: 1080, margin: '0 auto' }}>
             {activeSection === 'overview' && (
               <CourseOverview
+                courseId={courseId}
                 title={course.title}
                 niche={course.target_niche}
                 status={currentStatus}
