@@ -101,14 +101,23 @@ export async function runSalesPage(
   }
 
   const validated = SalesPageOutputSchema.safeParse(parsed)
-
   if (!validated.success) {
     telemetry.validationFailed(validated.error.errors.map(e => `${e.path.join('.')}: ${e.message}`))
-    throw normalizeError(new Error(`Sales page validation failed: ${validated.error.message}`), { agentName: AGENT_NAME, courseId })
+  } else {
+    telemetry.validationPassed('SalesPageOutputSchema')
   }
 
-  const output = validated.data
-  telemetry.validationPassed('SalesPageOutputSchema')
+  // Best-effort: a schema miss must never kill the course. Fall back to the
+  // clamped raw output with safe defaults for the fields we read/persist.
+  const output = (validated.success ? validated.data : {
+    ...(parsed as Record<string, unknown>),
+    headline:        (parsed?.headline as string) || courseTitle,
+    benefits:        Array.isArray(parsed?.benefits) ? parsed.benefits : [],
+    faq:             Array.isArray(parsed?.faq) ? parsed.faq : [],
+    pricing_section: (parsed?.pricing_section && typeof parsed.pricing_section === 'object')
+      ? { price_usd: priceUsd, ...(parsed.pricing_section as Record<string, unknown>) }
+      : { price_usd: priceUsd },
+  }) as SalesPageOutput
 
   const { data: asset, error: assetErr } = await serviceClient
     .from('digital_assets')

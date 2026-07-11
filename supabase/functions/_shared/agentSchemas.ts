@@ -178,56 +178,58 @@ export type ContentProductionOutput = z.infer<typeof ContentProductionOutputSche
    4. SALES PAGE AGENT
 ══════════════════════════════════════════════════════════════ */
 
+// Tolerant of count deviations (weaker models rarely hit exact minimums) so the
+// sales page stage never hard-fails the course. Structure kept; mins relaxed.
 export const SalesPageOutputSchema = z.object({
-  headline:         z.string().min(10).max(200),
-  subheadline:      z.string().max(300),
+  headline:         z.string().min(1).max(200),
+  subheadline:      z.string().max(300).catch(''),
   hero_section:     z.object({
-    hook_statement:    z.string(),
-    problem_agitation: z.string(),
-    solution_promise:  z.string(),
+    hook_statement:    z.string().catch(''),
+    problem_agitation: z.string().catch(''),
+    solution_promise:  z.string().catch(''),
   }),
   benefits: z.array(z.object({
-    title:       z.string(),
-    description: z.string(),
-    icon_suggestion: z.string(),
-  })).min(3).max(10),
+    title:       z.string().catch(''),
+    description: z.string().catch(''),
+    icon_suggestion: z.string().optional().default('✨'),
+  })).min(1).max(12),
   social_proof: z.object({
-    testimonial_prompts: z.array(z.string()).min(3),
-    stat_claims:         z.array(z.string()).max(5),
-    trust_badges:        z.array(z.string()).max(8),
+    testimonial_prompts: z.array(z.string()).min(1),
+    stat_claims:         z.array(z.string()).max(8).optional().default([]),
+    trust_badges:        z.array(z.string()).max(10).optional().default([]),
   }),
   objection_handling: z.array(z.object({
-    objection: z.string(),
-    response:  z.string(),
-  })).min(3).max(8),
+    objection: z.string().catch(''),
+    response:  z.string().catch(''),
+  })).min(1).max(10),
   pricing_section: z.object({
-    price_usd:        z.number().min(0),
+    price_usd:        z.number().min(0).catch(0),
     original_price:   z.number().optional(),
     payment_plans:    z.array(z.object({
-      label:       z.string(),
-      amount_usd:  z.number(),
+      label:       z.string().catch(''),
+      amount_usd:  z.number().catch(0),
       installments: z.number().int().optional(),
-    })).max(3),
-    guarantee:        z.string(),
+    })).max(4).optional().default([]),
+    guarantee:        z.string().optional().default('30-day money-back guarantee'),
     scarcity_element: z.string().optional(),
   }),
   cta_buttons: z.array(z.object({
-    text:     z.string().max(50),
+    text:     z.string().max(50).catch('Enroll Now'),
     subtext:  z.string().max(100).optional(),
-    position: z.enum(['hero', 'mid_page', 'footer']),
-  })).min(2).max(5),
+    position: z.enum(['hero', 'mid_page', 'footer']).catch('mid_page'),
+  })).min(1).max(6),
   faq: z.array(z.object({
-    question: z.string(),
-    answer:   z.string(),
-  })).min(3).max(10),
-  seo_title:       z.string().max(60),
-  seo_description: z.string().max(160),
+    question: z.string().catch(''),
+    answer:   z.string().catch(''),
+  })).min(1).max(12),
+  seo_title:       z.string().max(60).catch(''),
+  seo_description: z.string().max(160).catch(''),
   full_html:       z.string().optional(),
   reasoning_trace: z.array(z.object({
-    step:    z.number().int(),
-    type:    z.enum(['analysis', 'decision', 'action', 'observation', 'conclusion']),
-    content: z.string(),
-  })),
+    step:    z.number().int().catch(0),
+    type:    z.enum(['analysis', 'decision', 'action', 'observation', 'conclusion']).catch('analysis'),
+    content: z.string().catch(''),
+  })).optional().default([]),
 })
 
 export type SalesPageOutput = z.infer<typeof SalesPageOutputSchema>
