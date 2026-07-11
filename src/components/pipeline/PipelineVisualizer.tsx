@@ -196,10 +196,11 @@ function DiamondNode({ node, isActive }: { node: PipelineNode; isActive: boolean
         stroke={isActive ? 'var(--color-amber-400)' : colors.border}
         strokeWidth={isActive ? 1.5 : 1}
       />
+      {/* Label sits below the diamond so it never overlaps the shape */}
       <text
-        x={cx} y={cy}
+        x={cx} y={cy + d + 10}
         textAnchor="middle"
-        dominantBaseline="central"
+        dominantBaseline="middle"
         fill={colors.text}
         fontSize={9}
         fontWeight={600}
