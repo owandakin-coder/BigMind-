@@ -66,42 +66,52 @@ export async function runContentProduction(
   const systemCombined = contentProductionPrompts.buildCombinedSystemPrompt()
 
   let totalAssets = 0
-  const writtenCount   = { success: 0, failed: 0 }
-  const visualCount    = { success: 0, failed: 0 }
-  const interactiveCount = { success: 0, failed: 0 }
 
-  // ── 2. Process lessons — one combined call each ──────────
-  for (const lesson of sortedLessons) {
+  // Streams each lesson already has — so re-runs are idempotent (skip covered
+  // streams, no duplicate assets, no wasted rate-limit budget).
+  const done = { written: new Set<string>(), visual: new Set<string>(), interactive: new Set<string>() }
+  {
+    const { data: priorAssets } = await serviceClient
+      .from('digital_assets')
+      .select('asset_type, source_id')
+      .in('source_id', sortedLessons.map(l => l.id))
+    for (const a of priorAssets ?? []) {
+      const sid = a.source_id as string
+      if (a.asset_type === 'lesson_script') done.written.add(sid)
+      else if (a.asset_type === 'slide_outline') done.visual.add(sid)
+      else if (a.asset_type === 'quiz_json') done.interactive.add(sid)
+    }
+  }
+
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+  // Generate only the streams a lesson is still missing. Returns true once the
+  // lesson has written content. One combined 70b call (8b fallback) per lesson.
+  const produceLesson = async (lesson: { id: string; title: string; context_hook: string | null; modules: unknown }): Promise<boolean> => {
+    const needWritten     = !done.written.has(lesson.id)
+    const needVisual      = !done.visual.has(lesson.id)
+    const needInteractive = !done.interactive.has(lesson.id)
+    if (!needWritten && !needVisual && !needInteractive) return true
+
     const modData = lesson.modules as unknown as ModuleData
     const userPrompt = contentProductionPrompts.buildCombinedUserPrompt({
-      lessonTitle:  lesson.title,
-      coreConcept:  lesson.context_hook ?? '',
-      hook:         lesson.context_hook ?? '',
+      lessonTitle: lesson.title,
+      coreConcept: lesson.context_hook ?? '',
+      hook:        lesson.context_hook ?? '',
       niche,
-      moduleTitle:  modData.title,
-      isMVC:        modData.is_mvc,
+      moduleTitle: modData.title,
+      isMVC:       modData.is_mvc,
     })
 
-    // ── 2. Single combined 70b call (8b fallback) → all three streams ─
-    // One call per lesson instead of three separate ones: avoids the 8b
-    // rate-limit starvation that used to drop visual/interactive assets.
     let combined: { result: string } | null = null
     try {
       combined = await withRetry(
         async () => {
-          const resp = await callAIGateway({
-            model: 'llama-3.3-70b-versatile', systemPrompt: systemCombined,
-            userPrompt, maxTokens: 4096,
-            courseId, userId, agentName: AGENT_NAME, creditCost: 0, serviceClient,
-          })
+          const resp = await callAIGateway({ model: 'llama-3.3-70b-versatile', systemPrompt: systemCombined, userPrompt, maxTokens: 4096, courseId, userId, agentName: AGENT_NAME, creditCost: 0, serviceClient })
           return resp.content
         },
         async () => {
-          const resp = await callAIGateway({
-            model: 'llama-3.1-8b-instant', systemPrompt: systemCombined,
-            userPrompt, maxTokens: 4096,
-            courseId, userId, agentName: AGENT_NAME, creditCost: 0, serviceClient,
-          })
+          const resp = await callAIGateway({ model: 'llama-3.1-8b-instant', systemPrompt: systemCombined, userPrompt, maxTokens: 4096, courseId, userId, agentName: AGENT_NAME, creditCost: 0, serviceClient })
           return resp.content
         },
         AGENT_NAME, courseId, { ...DEFAULT_RETRY_CONFIG, maxAttempts: 2 }
@@ -109,57 +119,52 @@ export async function runContentProduction(
     } catch {
       combined = null
     }
+    if (!combined) return done.written.has(lesson.id)
 
-    // ── 3. Parse + validate each stream independently, then persist ──
-    const assetInserts: Array<{
-      source_type: string; source_id: string;
-      asset_type: string; content_json: Record<string, unknown>;
-      is_active: boolean;
-    }> = []
+    const parsed = parseJsonSafe(combined.result, {}) as Record<string, unknown>
+    const assetInserts: Array<{ source_type: string; source_id: string; asset_type: string; content_json: Record<string, unknown>; is_active: boolean }> = []
 
-    if (!combined) {
-      writtenCount.failed++; visualCount.failed++; interactiveCount.failed++
-    } else {
-      const parsed = parseJsonSafe(combined.result, {}) as Record<string, unknown>
-
+    if (needWritten) {
       const wValid = WrittenContentOutputSchema.safeParse({ ...(parsed.written as Record<string, unknown> ?? {}), lesson_id: lesson.id })
-      if (wValid.success) {
-        assetInserts.push({ source_type: 'lesson', source_id: lesson.id, asset_type: 'lesson_script', content_json: wValid.data as unknown as Record<string, unknown>, is_active: true })
-        writtenCount.success++
-      } else {
-        writtenCount.failed++
-        telemetry.validationFailed([`Written content for lesson ${lesson.id}: ${wValid.error.message}`])
-      }
-
+      if (wValid.success) { assetInserts.push({ source_type: 'lesson', source_id: lesson.id, asset_type: 'lesson_script', content_json: wValid.data as unknown as Record<string, unknown>, is_active: true }); done.written.add(lesson.id) }
+      else telemetry.validationFailed([`Written content for lesson ${lesson.id}: ${wValid.error.message}`])
+    }
+    if (needVisual) {
       const vValid = VisualContentOutputSchema.safeParse({ ...(parsed.visual as Record<string, unknown> ?? {}), lesson_id: lesson.id })
-      if (vValid.success) {
-        assetInserts.push({ source_type: 'lesson', source_id: lesson.id, asset_type: 'slide_outline', content_json: vValid.data as unknown as Record<string, unknown>, is_active: true })
-        visualCount.success++
-      } else {
-        visualCount.failed++
-      }
-
+      if (vValid.success) { assetInserts.push({ source_type: 'lesson', source_id: lesson.id, asset_type: 'slide_outline', content_json: vValid.data as unknown as Record<string, unknown>, is_active: true }); done.visual.add(lesson.id) }
+    }
+    if (needInteractive) {
       const iValid = InteractiveContentOutputSchema.safeParse({ ...(parsed.interactive as Record<string, unknown> ?? {}), lesson_id: lesson.id })
-      if (iValid.success) {
-        assetInserts.push({ source_type: 'lesson', source_id: lesson.id, asset_type: 'quiz_json', content_json: iValid.data as unknown as Record<string, unknown>, is_active: true })
-        interactiveCount.success++
-      } else {
-        interactiveCount.failed++
-      }
+      if (iValid.success) { assetInserts.push({ source_type: 'lesson', source_id: lesson.id, asset_type: 'quiz_json', content_json: iValid.data as unknown as Record<string, unknown>, is_active: true }); done.interactive.add(lesson.id) }
     }
 
     if (assetInserts.length > 0) {
-      const { error: assetErr } = await serviceClient
-        .from('digital_assets')
-        .insert(assetInserts)
-
+      const { error: assetErr } = await serviceClient.from('digital_assets').insert(assetInserts)
       if (!assetErr) totalAssets += assetInserts.length
     }
-
-    // Throttle between lessons to stay under Groq's per-minute token budget.
-    // Rate-limit errors are non-retryable, so the goal is to never trip them.
-    await new Promise((r) => setTimeout(r, 2500))
+    return done.written.has(lesson.id)
   }
+
+  // ── 2. Pass 1 — every lesson, throttled to stay under the rate limit ──
+  for (const lesson of sortedLessons) {
+    await produceLesson(lesson)
+    await sleep(2500)
+  }
+
+  // ── 2b. Pass 2 — retry lessons still missing written content after a
+  // pause so Groq's per-minute rate-limit window resets (fixes the tail). ──
+  const stragglers = sortedLessons.filter(l => !done.written.has(l.id))
+  if (stragglers.length) {
+    await sleep(8000)
+    for (const lesson of stragglers) {
+      await produceLesson(lesson)
+      await sleep(6000)
+    }
+  }
+
+  const writtenCount     = { success: done.written.size,     failed: sortedLessons.length - done.written.size }
+  const visualCount      = { success: done.visual.size,      failed: sortedLessons.length - done.visual.size }
+  const interactiveCount = { success: done.interactive.size, failed: sortedLessons.length - done.interactive.size }
 
   telemetry.dbWrite('digital_assets', totalAssets)
 
