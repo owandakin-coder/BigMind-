@@ -236,62 +236,65 @@ export type SalesPageOutput = z.infer<typeof SalesPageOutputSchema>
    5. MARKETING AGENT (Content Fission Engine)
 ══════════════════════════════════════════════════════════════ */
 
+// Tolerant of count/length deviations (weaker models rarely hit exact counts)
+// so the marketing stage never hard-fails the whole course. Structure is kept;
+// only over-strict min/max/length constraints are relaxed, with .catch defaults.
 const TwitterThreadSchema = z.object({
-  hook:   z.string().max(280),
-  tweets: z.array(z.string().max(280)).min(3).max(20),
-  cta:    z.string().max(280),
+  hook:   z.string().max(400).catch(''),
+  tweets: z.array(z.string().max(400)).min(1).max(30),
+  cta:    z.string().max(400).catch(''),
 })
 
 const LinkedInCarouselSchema = z.object({
-  title:  z.string().max(150),
+  title:  z.string().max(200).catch(''),
   slides: z.array(z.object({
-    slide_number: z.number().int(),
-    headline:     z.string().max(100),
-    body:         z.string().max(300),
-  })).min(5).max(15),
-  cover_image_prompt: z.string(),
+    slide_number: z.number().int().catch(0),
+    headline:     z.string().max(200).catch(''),
+    body:         z.string().max(500).catch(''),
+  })).min(1).max(30),
+  cover_image_prompt: z.string().optional().default(''),
 })
 
 export const MarketingOutputSchema = z.object({
   course_id: z.string().uuid(),
-  twitter_threads: z.array(TwitterThreadSchema).length(3),
+  twitter_threads: z.array(TwitterThreadSchema).min(1).max(6),
   linkedin_carousel: LinkedInCarouselSchema,
   short_form_video_scripts: z.array(z.object({
-    platform:   z.enum(['tiktok', 'instagram_reels', 'youtube_shorts']),
-    hook:       z.string().max(150),
-    body:       z.string().max(500),
-    cta:        z.string().max(100),
-    duration_s: z.number().int().min(15).max(60),
-  })).length(2),
+    platform:   z.enum(['tiktok', 'instagram_reels', 'youtube_shorts']).catch('tiktok'),
+    hook:       z.string().max(200).catch(''),
+    body:       z.string().max(700).catch(''),
+    cta:        z.string().max(150).catch(''),
+    duration_s: z.number().int().min(5).max(300).catch(30),
+  })).min(1).max(6),
   newsletter_intro: z.object({
-    subject_line: z.string().max(80),
-    preview_text: z.string().max(100),
-    body:         z.string().min(100).max(1000),
+    subject_line: z.string().max(120).catch(''),
+    preview_text: z.string().max(150).catch(''),
+    body:         z.string().min(1).max(4000),
   }),
   email_sequence: z.array(z.object({
-    day:     z.number().int().min(0).max(14),
-    subject: z.string().max(80),
-    preview: z.string().max(100),
-    body:    z.string().min(50),
-    cta:     z.string(),
-  })).min(5).max(10),
+    day:     z.number().int().min(0).max(90).catch(0),
+    subject: z.string().max(120).catch(''),
+    preview: z.string().max(150).catch(''),
+    body:    z.string().min(1),
+    cta:     z.string().catch(''),
+  })).min(1).max(20),
   ad_copy: z.array(z.object({
-    platform:   z.enum(['facebook', 'google', 'instagram', 'youtube']),
-    headline:   z.string().max(40),
-    description: z.string().max(125),
-    cta_button:  z.string().max(20),
-  })).min(2).max(8),
+    platform:   z.enum(['facebook', 'google', 'instagram', 'youtube']).catch('facebook'),
+    headline:   z.string().max(60).catch(''),
+    description: z.string().max(200).catch(''),
+    cta_button:  z.string().max(30).catch(''),
+  })).min(1).max(12),
   content_calendar: z.array(z.object({
-    day:      z.number().int().min(1).max(30),
-    platform: z.string(),
-    content_type: z.string(),
-    topic:    z.string(),
-  })).min(14).max(30),
+    day:      z.number().int().min(1).max(90).catch(1),
+    platform: z.string().catch(''),
+    content_type: z.string().catch(''),
+    topic:    z.string().catch(''),
+  })).min(1).max(60),
   reasoning_trace: z.array(z.object({
-    step:    z.number().int(),
-    type:    z.enum(['analysis', 'decision', 'action', 'observation', 'conclusion']),
-    content: z.string(),
-  })),
+    step:    z.number().int().catch(0),
+    type:    z.enum(['analysis', 'decision', 'action', 'observation', 'conclusion']).catch('analysis'),
+    content: z.string().catch(''),
+  })).optional().default([]),
 })
 
 export type MarketingOutput = z.infer<typeof MarketingOutputSchema>

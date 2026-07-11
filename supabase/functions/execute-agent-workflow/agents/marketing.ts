@@ -116,13 +116,22 @@ export async function runMarketing(
   }
 
   const validated = MarketingOutputSchema.safeParse({ ...parsed, course_id: courseId })
-
   if (!validated.success) {
     telemetry.validationFailed(validated.error.errors.map(e => `${e.path.join('.')}: ${e.message}`))
-    throw normalizeError(new Error(`Marketing validation: ${validated.error.message}`), { agentName: AGENT_NAME, courseId })
   }
 
-  const output = validated.data
+  // Best-effort: marketing assets are supplementary — a schema miss must never
+  // hard-fail the whole course. Use validated data when possible, else fall back
+  // to the clamped raw output with safe defaults for any missing field.
+  const output = (validated.success ? validated.data : {
+    twitter_threads:          Array.isArray(parsed?.twitter_threads) ? parsed.twitter_threads : [],
+    linkedin_carousel:        parsed?.linkedin_carousel ?? { title: '', slides: [], cover_image_prompt: '' },
+    short_form_video_scripts: Array.isArray(parsed?.short_form_video_scripts) ? parsed.short_form_video_scripts : [],
+    newsletter_intro:         parsed?.newsletter_intro ?? { subject_line: '', preview_text: '', body: '' },
+    email_sequence:           Array.isArray(parsed?.email_sequence) ? parsed.email_sequence : [],
+    ad_copy:                  Array.isArray(parsed?.ad_copy) ? parsed.ad_copy : [],
+    content_calendar:         Array.isArray(parsed?.content_calendar) ? parsed.content_calendar : [],
+  }) as MarketingOutput
 
   // Persist as multiple digital assets — map to valid asset_type ENUM values
   const assetInserts = [
