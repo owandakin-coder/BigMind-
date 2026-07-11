@@ -32,6 +32,7 @@ export interface MarketingData {
 
 export interface CourseAssets {
   salesPage: SalesPageData | null
+  salesPageId: string | null
   marketing: MarketingData
   hasMarketing: boolean
 }
@@ -44,15 +45,16 @@ export function useCourseAssets(courseId: string) {
     queryFn: async () => {
       const { data } = await supabase
         .from('digital_assets')
-        .select('content_json, created_at')
+        .select('id, content_json, created_at')
         .eq('source_id', courseId)
         .order('created_at', { ascending: false })
 
-      const rows = (data ?? []) as { content_json: Record<string, unknown> }[]
+      const rows = (data ?? []) as { id: string; content_json: Record<string, unknown> }[]
 
       // Sales page = latest asset shaped like a sales page (headline + hero_section)
-      const salesPage = (rows.find(r => r.content_json?.headline && r.content_json?.hero_section)
-        ?.content_json ?? null) as SalesPageData | null
+      const salesRow = rows.find(r => r.content_json?.headline && r.content_json?.hero_section) ?? null
+      const salesPage = (salesRow?.content_json ?? null) as SalesPageData | null
+      const salesPageId = salesRow?.id ?? null
 
       // Marketing assets are wrapped as { type, data } — take the latest per type
       const latestByType: Record<string, unknown> = {}
@@ -77,7 +79,7 @@ export function useCourseAssets(courseId: string) {
         marketing.emailSequence.length > 0 || marketing.adCopy.length > 0 ||
         marketing.contentCalendar.length > 0
 
-      return { salesPage, marketing, hasMarketing }
+      return { salesPage, salesPageId, marketing, hasMarketing }
     },
   })
 }

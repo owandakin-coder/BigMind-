@@ -9,9 +9,11 @@ import { useQuery } from '@tanstack/react-query'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { MarkdownLite } from './markdown'
+import { useUpdateLesson } from '@/hooks/useUpdateLesson'
 
-interface CoursePreviewProps { courseId: string }
+interface CoursePreviewProps { courseId: string; editable?: boolean }
 
 interface Mod { id: string; title: string; description: string | null; sort_order: number; is_mvc: boolean }
 interface Les { id: string; module_id: string; title: string; sort_order: number; estimated_minutes: number | null; context_hook: string | null; observation_concept: string | null; reflection_exercise: string | null }
@@ -24,9 +26,28 @@ function fmtHours(total: number): string {
   return h > 0 ? `${h}h${m ? ` ${m}m` : ''}` : `${m}m`
 }
 
-export function CoursePreview({ courseId }: CoursePreviewProps) {
+const editLabel: React.CSSProperties = { fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }
+const editInput: React.CSSProperties = { background: 'var(--surface-sunken)', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text-primary)', fontSize: 'var(--text-sm)', outline: 'none', width: '100%', fontFamily: 'var(--font-sans)' }
+
+export function CoursePreview({ courseId, editable = true }: CoursePreviewProps) {
   const supabase = createBrowserClient()
   const [open, setOpen] = useState<Set<string>>(new Set())
+  const [editId, setEditId] = useState<string | null>(null)
+  const [form, setForm] = useState<{ title: string; body: string; takeaways: string }>({ title: '', body: '', takeaways: '' })
+  const { mutate: saveLesson, isPending: saving, isError: saveError } = useUpdateLesson(courseId)
+
+  const startEdit = (lessonId: string, title: string, c?: Written) => {
+    setForm({ title, body: c?.body_markdown ?? '', takeaways: (c?.key_takeaways ?? []).join('\n') })
+    setEditId(lessonId)
+  }
+  const doSave = (lessonId: string) => {
+    saveLesson({
+      lessonId,
+      title: form.title.trim() || undefined,
+      bodyMarkdown: form.body,
+      keyTakeaways: form.takeaways.split('\n').map(s => s.trim()).filter(Boolean),
+    }, { onSuccess: () => setEditId(null) })
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['course-preview', courseId],
@@ -127,7 +148,21 @@ export function CoursePreview({ courseId }: CoursePreviewProps) {
                           <span style={{ flex: 1, fontSize: 'var(--text-sm)' }}>{les.title}</span>
                           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{les.estimated_minutes ?? 0} min</span>
                         </button>
-                        {isOpen && (
+                        {isOpen && editId === les.id ? (
+                          <div style={{ padding: '0 var(--space-5) var(--space-5) var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                            <label style={editLabel}>Lesson title</label>
+                            <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={editInput} />
+                            <label style={editLabel}>Lesson content (markdown)</label>
+                            <textarea value={form.body} onChange={e => setForm({ ...form, body: e.target.value })} rows={12} style={{ ...editInput, resize: 'vertical', fontFamily: 'var(--font-mono)', lineHeight: 1.6 }} />
+                            <label style={editLabel}>Key takeaways (one per line)</label>
+                            <textarea value={form.takeaways} onChange={e => setForm({ ...form, takeaways: e.target.value })} rows={4} style={{ ...editInput, resize: 'vertical' }} />
+                            {saveError && <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-red-400)' }}>Couldn&rsquo;t save — please try again.</p>}
+                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                              <Button variant="primary" size="sm" loading={saving} onClick={() => doSave(les.id)}>Save changes</Button>
+                              <Button variant="ghost" size="sm" onClick={() => setEditId(null)}>Cancel</Button>
+                            </div>
+                          </div>
+                        ) : isOpen && (
                           <div style={{ padding: '0 var(--space-5) var(--space-5) var(--space-6)' }}>
                             {les.context_hook && <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.6, margin: '4px 0 12px' }}>{les.context_hook}</p>}
                             {c?.body_markdown
@@ -140,6 +175,12 @@ export function CoursePreview({ courseId }: CoursePreviewProps) {
                                   {c!.key_takeaways!.map((k, i) => <li key={i}>{k}</li>)}
                                 </ul>
                               </div>
+                            )}
+                            {editable && (
+                              <button onClick={() => startEdit(les.id, les.title, c)} className="cf-navlink" style={{ marginTop: 'var(--space-3)', display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-sm)', padding: '5px 10px', color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)', cursor: 'pointer' }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+                                Edit lesson
+                              </button>
                             )}
                           </div>
                         )}
