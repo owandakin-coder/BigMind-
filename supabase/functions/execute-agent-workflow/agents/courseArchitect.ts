@@ -134,7 +134,9 @@ export async function runCourseArchitect(
       core_framework:    output as unknown as Record<string, unknown>,
       learning_outcomes: output.learning_objectives,
       total_modules:     output.modules.length,
-      total_lessons:     output.total_lessons,
+      // Use the ACTUAL lesson count (sum across modules), not the model's
+      // self-reported total_lessons which is often inflated / inconsistent.
+      total_lessons:     output.modules.reduce((sum, m) => sum + (m.lessons?.length ?? 0), 0),
       estimated_hours:   output.total_hours,
       is_active:         true,
     })
