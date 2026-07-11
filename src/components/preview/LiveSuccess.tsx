@@ -5,6 +5,8 @@
  */
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { createBrowserClient } from '@/lib/supabase/client'
+import { exportCourseHtml } from '@/lib/exportCourse'
 
 interface LiveSuccessProps {
   courseId: string
@@ -15,10 +17,16 @@ interface LiveSuccessProps {
 
 export function LiveSuccess({ courseId, onViewCourse, onViewSales, onViewMarketing }: LiveSuccessProps) {
   const [shared, setShared] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const sharePreview = async () => {
     const url = `${window.location.origin}/courses/${courseId}/preview`
     try { await navigator.clipboard.writeText(url); setShared(true); setTimeout(() => setShared(false), 2000) } catch { /* ignore */ }
+  }
+
+  const downloadCourse = async () => {
+    setExporting(true)
+    try { await exportCourseHtml(courseId, createBrowserClient()) } finally { setExporting(false) }
   }
 
   return (
@@ -49,10 +57,13 @@ export function LiveSuccess({ courseId, onViewCourse, onViewSales, onViewMarketi
         <Button variant="secondary" size="lg" onClick={sharePreview} icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>}>
           {shared ? 'Link copied' : 'Share preview link'}
         </Button>
+        <Button variant="secondary" size="lg" loading={exporting} onClick={downloadCourse} icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}>
+          Download course
+        </Button>
       </div>
 
       <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-        The preview link opens the student view of your course.
+        Share the preview link, or download a self-contained HTML file to host or send to students.
       </p>
     </div>
   )
