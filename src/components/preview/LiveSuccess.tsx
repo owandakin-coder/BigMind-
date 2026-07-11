@@ -20,7 +20,8 @@ export function LiveSuccess({ courseId, onViewCourse, onViewSales, onViewMarketi
   const [exporting, setExporting] = useState(false)
 
   const sharePreview = async () => {
-    const url = `${window.location.origin}/courses/${courseId}/preview`
+    // Public student page — works without login, safe to share.
+    const url = `${window.location.origin}/learn/${courseId}`
     try { await navigator.clipboard.writeText(url); setShared(true); setTimeout(() => setShared(false), 2000) } catch { /* ignore */ }
   }
 
@@ -55,7 +56,7 @@ export function LiveSuccess({ courseId, onViewCourse, onViewSales, onViewMarketi
           View marketing assets
         </Button>
         <Button variant="secondary" size="lg" onClick={sharePreview} icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>}>
-          {shared ? 'Link copied' : 'Share preview link'}
+          {shared ? 'Link copied' : 'Copy student link'}
         </Button>
         <Button variant="secondary" size="lg" loading={exporting} onClick={downloadCourse} icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}>
           Download course
